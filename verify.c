@@ -14,7 +14,7 @@
 #define _GNU_SOURCE
 
 #include <stdio.h>
-#include <malloc.h> //omit on mac
+//#include <malloc.h> //omit on mac
 #include <string.h>
 #include <stdlib.h> //for abs
 #include <ctype.h>  //for isdigit and isspace

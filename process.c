@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <malloc.h>
+//#include <malloc.h>
 #include <string.h>
 
 #define MAXRUNS 5000

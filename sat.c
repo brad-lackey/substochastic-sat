@@ -4,6 +4,7 @@
  * Created by Brad Lackey on 3/14/16. Last modified 3/14/16.
  */
 
+#include <string.h>
 #include "sat.h"
 
 // Comparison routine for quicksort.
@@ -38,13 +39,13 @@ int parseHeader(char *line, int *nv, int *nc){
   if ( sscanf(line, "p %s %d %d", prob, &nvars, &ncls) != 3 )
     return -1;
   
-  if ( strcmp(prob,"cnf") ){
+  if ( strcmp(prob,"cnf") == 0 ){
     *nv = nvars;
     *nc = ncls;
     return 0;
   }
   
-  if ( strcmp(prob,"wcnf") ){
+  if ( strcmp(prob,"wcnf") == 0 ){
     *nv = nvars;
     *nc = ncls;
     return 1;
@@ -75,6 +76,13 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
     if ( (type = parseHeader(line,&nvars,&ncls)) < 0 ) {
       *sat_ptr = NULL;
       return 0;
+    }
+    
+    if ( type == 0 ){
+      printf("Loading SAT file...\n");
+    }
+    if ( type == 1 ){
+      printf("Loading weighted SAT file...\n");
     }
 //    if ( sscanf(line,"p cnf %d %d",&nvars,&ncls) != 2 ){
 //      *sat_ptr = NULL;

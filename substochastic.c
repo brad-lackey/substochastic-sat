@@ -90,7 +90,7 @@ void autoparam(double varsperclause, int vars, double *weight, double *runtime, 
 }
 
 int main(int argc, char **argv){
-  int i, parity, trials, try, popsize;
+  int parity, trials, try, popsize;
   double weight, runtime, mean, mark;
   double a, b, t, dt;
   FILE *fp;
