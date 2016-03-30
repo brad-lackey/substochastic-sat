@@ -1,7 +1,7 @@
 /** @file  sat.h
  * @brief Header file for a weighted SAT potential.
  *
- * Created by Brad Lackey on 3/14/16. Last modified 3/14/16.
+ * Created by Brad Lackey on 3/14/16. Last modified 3/30/16.
  */
 
 #ifndef sat_h
@@ -15,7 +15,7 @@
 
 
 
-/// The underlying type for a SAT instance
+/// The underlying type for a SAT instance.
 /**
  * This data type just holds the SAT clauses in DIMACS format.
  */
@@ -35,6 +35,11 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr);   ///< Create a SAT instance from a 
 void freeSAT(SAT *sat_ptr);                   ///< Deallocation routine for a SAT instance.
 void printSAT(FILE *fp, int nvars, SAT sat);  ///< Print in DIMACS format.
 
+
+/// This is the underlying type for the derivative of a SAT instance.
+/**
+ * A crucial speedup in the algorithm is owed to not evaluating the SAT instance, but rather simply computing the difference based on the bit flipped.
+ */
 struct diff_sat_st;
 typedef struct diff_sat_st * DSAT;
 

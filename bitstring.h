@@ -1,7 +1,7 @@
 /** @file  bitstring.h
  * @brief Header file for a weighted bitstring.
  *
- * Created by Brad Lackey on 3/14/16. Last modified 3/16/16.
+ * Created by Brad Lackey on 3/14/16. Last modified 3/30/16.
  */
 
 #ifndef bitstring_h
@@ -35,6 +35,6 @@ int copyBitstring(Bitstring bst_out, Bitstring bst_in); ///< Routine for copying
 
 int randomBitFlip(Bitstring bst_out, Bitstring bst_in); ///< Routine for stepping on the hypercube.
 
-void printBits(Bitstring bst); //routine for printing a bitstring in MaxSAT 2015 format
+void printBits(Bitstring bst); ///< Routine for printing a bitstring in MaxSAT 2015 format.
 
 #endif /* bitstring_h */

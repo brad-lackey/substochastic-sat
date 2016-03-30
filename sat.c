@@ -1,7 +1,7 @@
 /** @file  sat.c
  * @brief Source file for a SAT potential type in the Substochastic library.
  *
- * Created by Brad Lackey on 3/14/16. Last modified 3/14/16.
+ * Created by Brad Lackey on 3/14/16. Last modified 3/30/16.
  */
 
 #include <string.h>
@@ -30,7 +30,7 @@ int dedupe(int *buffer, int size){
   return i+1;
 }
 
-// Parse out the type of problem and paramters.
+// Parse out the type of problem and parameters.
 int parseHeader(char *line, int *nv, int *nc){
   char prob[50];
   int nvars, ncls;
@@ -56,7 +56,7 @@ int parseHeader(char *line, int *nv, int *nc){
 
 
 /**
- * This SAT instance must be given in DIMACS-CNF format.
+ * This ((un)weighted/partial) SAT instance must be given in DIMACS-CNF format.
  * @param fp points to the file to be read.
  * @param sat_ptr points to the SAT instance to be created.
  * @return Number of variables if successful, zero if failed.
@@ -78,16 +78,13 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
       return 0;
     }
     
-    if ( type == 0 ){
-      printf("Loading SAT file...\n");
-    }
-    if ( type == 1 ){
-      printf("Loading weighted SAT file...\n");
-    }
-//    if ( sscanf(line,"p cnf %d %d",&nvars,&ncls) != 2 ){
-//      *sat_ptr = NULL;
-//      return 0;
+//    if ( type == 0 ){
+//      printf("Loading SAT file...\n");
 //    }
+//    if ( type == 1 ){
+//      printf("Loading weighted SAT file...\n");
+//    }
+
     if ( (buf = (int *) malloc(nvars*sizeof(int))) == NULL ) {
       *sat_ptr = NULL;
       return 0;
@@ -102,6 +99,7 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
   for (i=0; i<sat->num_clauses; ++i) {
     if ( (linelen = getline(&line, &linecap, fp)) <= 0 ) {
       freeSAT(&sat);
+      free(buf);
       *sat_ptr = NULL;
       return 0;
     }
