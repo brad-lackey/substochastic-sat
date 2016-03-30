@@ -145,16 +145,21 @@ int randomBitFlip(Bitstring bst_out, Bitstring bst_in){
 /**
  * This prints the bitstring in the format demanded by the MaxSAT competition:
  * namely bits are numbered 1,2,3,4,... and we output -x if bit x is 0 and output x if bit x is 1.
+ * @param fp is the file stream to put the output (typically stdout).
  * @param bst is the instance to be printed.
  * @return None.
  */
-void printBits(Bitstring bst) {
+void printBits(FILE *fp, Bitstring bst) {
   int i;
   int val;
+  
+  fprintf(fp,"o %i\n", (int) bst->potential);
+  fprintf(fp,"v ");
+
   for(i = 0; i < nbts; i++) {
     val = bst->node[i/BITS_PER_WORD] >> (i % BITS_PER_WORD);
-    if(val%2) printf("%i ", i+1);
-    else printf("%i ", -(i+1));
+    if(val%2) fprintf(fp,"%i ", i+1);
+    else fprintf(fp,"%i ", -(i+1));
   }
   printf("\n");
 }

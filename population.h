@@ -29,6 +29,7 @@ struct population_st {
   DSAT ds;             ///< Reference to the SAT derivative for updates.
   int psize;           ///< The current population size.
   Bitstring *walker;   ///< Array of bitstrings that form the population.
+  Bitstring winner;    ///< A copy of the best walker yet found.
   double avg_v;        ///< Average potential for the population.
   double max_v;        ///< Maximum potential for the population.
   double min_v;        ///< Minimum potential for the population.

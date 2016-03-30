@@ -29,7 +29,7 @@ void update(double a, double b, double mean, Population P, int parity);
  *optima with the same potential, just print one of them. Returns the index of
  *the optimum printed.
  */
-int printOpt(Population P) {
+/*int printOpt(Population P) {
   int i;
   double potential;
   i = -1;
@@ -38,8 +38,9 @@ int printOpt(Population P) {
     potential = getPotential(P->walker[i], P->sat);
     if(potential == P->min_v) printBits(P->walker[i]);
   }while(potential != P->min_v);
+  
   return i;
-}
+}*/
 
 /*Added by SPJ 3/17
  *Returns the average number of variables per clause.
@@ -86,7 +87,7 @@ int main(int argc, char **argv){
   double a, b, t, dt;
   FILE *fp;
   Population pop;
-  int optindex;         //index of optimum found
+//  int optindex;         //index of optimum found
   int *mins;            //the minima from different trials
   Bitstring *solutions; //the corresponding bitstrings
   int best_try;         //the trial in which the best minimum was found
@@ -97,7 +98,7 @@ int main(int argc, char **argv){
   long seed;            //the seed for the RNG
   beg = clock();
   if (argc != 6 && argc != 2) {
-    printf("Usage: %s instance.cnf <step weight> <runtime> <population size> <trials>\n",argv[0]);
+    printf("Usage: %s instance.cnf [<step weight> <runtime> <population size> <trials>]\n",argv[0]);
     return 2;
   }
   if ( (fp = fopen(argv[1], "r")) == NULL ){
@@ -173,18 +174,24 @@ int main(int argc, char **argv){
         mark += runtime/100.0;
       }
     }
-    printf("o %i\n",(int)pop->min_v);
-    printf("v ");
-    optindex = printOpt(pop);
+//    printf("o %i\n",(int)pop->min_v);
+//    printf("v ");
+//    optindex = printOpt(pop);
+    
+    printBits(stdout, pop->winner);
+    
+
+    
     mins[try] = (int)pop->min_v;
-    copyBitstring(solutions[try], pop->walker[optindex]);
+//    copyBitstring(solutions[try], pop->walker[optindex]);
+    copyBitstring(solutions[try], pop->winner);
   }
   best_try = 0;
   for(try = 1; try < trials; try++) if(mins[try] < mins[best_try]) best_try = try;
   printf("c Final answer: \n");
-  printf("o %i\n", mins[best_try]);
-  printf("v ");
-  printBits(solutions[best_try]);
+//  printf("o %i\n", mins[best_try]);
+//  printf("v ");
+  printBits(stdout, solutions[best_try]);
   for(try = 0; try < trials; try++) freeBitstring(&solutions[try]);
   free(solutions);
   free(mins);
@@ -215,10 +222,14 @@ void update(double a, double b, double mean, Population P, int parity){
     if ( p < a ) {
       k = randomBitFlip(P->walker[new+j], P->walker[old+i]);
       e = P->walker[old+i]->potential + ((k>0)-(k<0))*getPotential(P->walker[new+j],P->ds->der[abs(k)-1]);
-      if ( e < min ) min = e;
+      P->walker[new+j]->potential = e;
+      if ( e < min ){
+        min = e;
+        if ( e < P->winner->potential )
+          copyBitstring(P->winner, P->walker[new+j]);
+      }
       if ( e > max ) max = e;
       avg += e;
-      P->walker[new+j]->potential = e;
       ++j;
       continue;
     }

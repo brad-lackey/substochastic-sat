@@ -46,6 +46,12 @@ int initPopulation(Population *Pptr, FILE *fp){
     return MEMORY_ERROR;
   }
   
+  if ( (err = initBitstring(&(P->winner))) ) {
+    freePopulation(&P);
+    *Pptr = NULL;
+    return err;
+  }
+  
   for (i=0; i<(2*arraysize); ++i) {
     if ( (err = initBitstring(P->walker + i)) ) {
       freePopulation(&P);
@@ -74,6 +80,8 @@ void freePopulation(Population *Pptr){
       freeSAT(&((*Pptr)->sat));
     if ( (*Pptr)->ds != NULL )
       freeSATDerivative(&((*Pptr)->ds));
+    if ( (*Pptr)->winner != NULL )
+      freeBitstring(&((*Pptr)->winner));
     if ( (*Pptr)->walker != NULL ) {
       for (j=0; j<(2*arraysize); ++j)
         freeBitstring((*Pptr)->walker + j);
@@ -87,6 +95,7 @@ void freePopulation(Population *Pptr){
 /**
  * This routine initializes an already created population of specified size with random walkers.
  * The potential of each walker is computed and stored, so updates can be performed using derivatives.
+ * The walker with the best potential is stored off as the winner.
  * Note: this initial distribution is uniform, which is the ground state for the hypercube Laplacian.
  * If one changes the driving Hamiltonian, then this routine will likely need to be modified.
  * @param P is the population to be initialized.
@@ -94,13 +103,14 @@ void freePopulation(Population *Pptr){
  * @return Zero.
  */
 int randomPopulation(Population P, int size){
-  int i;
+  int i, argmin;
   double e, avg, min, max;
   
   randomBitstring(P->walker[0]);
   e = getPotential(P->walker[0], P->sat);
   avg = e;
   min = e;
+  argmin = 0;
   max = e;
   P->walker[0]->potential = e;
   
@@ -108,8 +118,10 @@ int randomPopulation(Population P, int size){
     randomBitstring(P->walker[i]);
     e = getPotential(P->walker[i], P->sat);
     avg += e;
-    if ( e < min )
+    if ( e < min ){
       min = e;
+      argmin = i;
+    }
     if ( e > max )
       max = e;
     P->walker[i]->potential = e;
@@ -119,6 +131,8 @@ int randomPopulation(Population P, int size){
   P->avg_v = avg/size;
   P->max_v = max;
   P->min_v = min;
+  
+  copyBitstring(P->winner, P->walker[argmin]);
   
   return 0;
 }

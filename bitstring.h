@@ -35,6 +35,6 @@ int copyBitstring(Bitstring bst_out, Bitstring bst_in); ///< Routine for copying
 
 int randomBitFlip(Bitstring bst_out, Bitstring bst_in); ///< Routine for stepping on the hypercube.
 
-void printBits(Bitstring bst); ///< Routine for printing a bitstring in MaxSAT 2015 format.
+void printBits(FILE *fp, Bitstring bst); ///< Routine for printing a bitstring in MaxSAT 2015 format.
 
 #endif /* bitstring_h */
