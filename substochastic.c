@@ -56,11 +56,13 @@ double avgLength(SAT instance) {
 /*Added by SPJ 3/17
  *Automatically chooses parameters, such as runtime and number of trials.
  */
-void autoparam(double varsperclause, int vars, double *weight, double *runtime, int *trials) {
+void autoparam(double varsperclause, int vars, double *weight, double *runtime, int *trials, double *starttime) {
   int k;
   k = (int)round(varsperclause);
-  *weight = 1.0;
+  //*weight = 1.0;
+  *weight = 100.0; // Changed since weight now percent -- Michael 3/30/16
   *trials = 5; //default
+  *starttime = 0.0; // default -- Michael 3/30/16
   if(k == 2) {
     //These values are determined using the experimental results in
     //summary_2sat120v.txt and summary_2sat200v.txt.
@@ -83,7 +85,7 @@ void autoparam(double varsperclause, int vars, double *weight, double *runtime, 
 
 int main(int argc, char **argv){
   int parity, trials, try, popsize;
-  double weight, runtime, mean, mark;
+  double weight, runtime, mean, mark, starttime;
   double a, b, t, dt;
   FILE *fp;
   Population pop;
@@ -97,8 +99,13 @@ int main(int argc, char **argv){
   double varsperclause; //average number of variables per clause
   long seed;            //the seed for the RNG
   beg = clock();
+<<<<<<< HEAD
   if (argc != 6 && argc != 2) {
     printf("Usage: %s instance.cnf [<step weight> <runtime> <population size> <trials>]\n",argv[0]);
+=======
+  if (argc != 7 && argc != 2) {
+    printf("Usage: %s instance.cnf [<step weight> <runtime> <population size> <trials> <start time>]\n",argv[0]);
+>>>>>>> origin/master
     return 2;
   }
   if ( (fp = fopen(argv[1], "r")) == NULL ){
@@ -108,11 +115,14 @@ int main(int argc, char **argv){
   //If we want to autoparam popsize we will have to separate loading the DIMACS
   //file and allocating the population memory into separate steps. Right now they
   //are done together in initPopulation.
-  if(argc == 6) {
+
+  //starttime parameter added by Michael 3/30/16
+  if(argc == 7) {
     weight = (double) atoi(argv[2]);
     sscanf(argv[3], "%lf", &runtime); //allows scientific notation unlike atoi
     popsize = atoi(argv[4]);
     trials = atoi(argv[5]);
+    starttime = atoi(argv[6]);
   }
   else popsize = 128;
   arraysize = 2*popsize;
@@ -125,7 +135,7 @@ int main(int argc, char **argv){
   seed = time(0);
   //seed = 0 // for testing
   srand48(seed);
-  if(argc == 2) autoparam(varsperclause, nbts, &weight, &runtime, &trials);
+  if(argc == 2) autoparam(varsperclause, nbts, &weight, &runtime, &trials, &starttime);
   printf("c ------------------------------------------------------\n");
   printf("c Substochastic Monte Carlo, version 1.0                \n");
   printf("c Brad Lackey, Stephen Jordan, and Michael Jarret, 2016.\n");
@@ -136,6 +146,7 @@ int main(int argc, char **argv){
   printf("c Step weight: %f\n", weight);
   printf("c Population size: %d\n", popsize);
   printf("c Runtime: %e\n", runtime);
+  printf("c Start time: %e\n", starttime);
   printf("c Trials: %i\n", trials);
   printf("c Variables per clause: %f\n", varsperclause);
   printf("c Seed: %li\n", seed);
@@ -153,11 +164,11 @@ int main(int argc, char **argv){
     return MEMORY_ERROR;
   }
   for(try = 0; try < trials; try++) {
-    t = 0.0;
+    t = starttime;
     parity = 0;
     randomPopulation(pop,arraysize/2);
     while (t < runtime) {
-      a = weight*(1.0 - t/runtime);
+      a = weight*(1.0 - t/runtime)/100.0; // Turned weight into percent -- Michael 3/30/16
       b = (t/runtime);
       mean = pop->avg_v + ((pop->max_v - pop->min_v)/arraysize)*((arraysize/2) - pop->psize);
       if ( (pop->max_v - mean) > (mean - pop->min_v) )
@@ -236,7 +247,8 @@ void update(double a, double b, double mean, Population P, int parity){
     p -= a;
    
     // Second potential event: walker spawns/dies.
-    if ( mean > P->walker[old+i]->potential ) { // Case of spawning.
+    // Removed dead line, implied by subsequent comparisons -- Michael 3/30/16
+//    if ( mean > P->walker[old+i]->potential ) { // Case of spawning.
       if ( p < b*(mean - P->walker[old+i]->potential) ) {
         copyBitstring(P->walker[new+j], P->walker[old+i]);
         copyBitstring(P->walker[new+j+1], P->walker[old+i]);
@@ -247,11 +259,11 @@ void update(double a, double b, double mean, Population P, int parity){
         j += 2;
         continue;
       }
-    } else {
+//    } else {
       if ( p < b*(P->walker[old+i]->potential - mean) ) { // Case of dying.
         continue;
       }
-    }
+//    }
     
     // Third potential event: walker stays.
     copyBitstring(P->walker[new+j], P->walker[old+i]);
