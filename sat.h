@@ -35,6 +35,8 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr);   ///< Create a SAT instance from a 
 void freeSAT(SAT *sat_ptr);                   ///< Deallocation routine for a SAT instance.
 void printSAT(FILE *fp, int nvars, SAT sat);  ///< Print in DIMACS format.
 
+double getPotential(Bitstring bts, SAT sat);  ///< Evaluates the SAT instance on the passed bitstring.
+
 
 /// This is the underlying type for the derivative of a SAT instance.
 /**

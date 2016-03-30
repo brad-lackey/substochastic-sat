@@ -1,3 +1,9 @@
+/** @file  substochastic.c
+ * @brief Main file for Substochastic Monte Carlo.
+ *
+ * Created by Brad Lackey on 3/14/16. Last modified 3/30/16.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -5,6 +11,7 @@
 #include "macros.h"
 #include "bitstring.h"
 #include "sat.h"
+#include "population.h"
 
 //On machines with very old versions of glibc (e.g. the Raritan cluster)
 //we need to define gnu_source in order to avoid warnings about implicit
@@ -12,25 +19,9 @@
 #define _GNU_SOURCE
 
 extern int nbts;
-static int arraysize;
+extern int arraysize;
 
-struct population_st {
-  SAT sat;
-  DSAT ds;
-  int psize;
-  Bitstring *walker;
-  double avg_v;
-  double max_v;
-  double min_v;
-};
 
-typedef struct population_st * Population;
-
-int initPopulation(Population *Pptr, FILE *fp);
-void freePopulation(Population *Pptr);
-int randomPopulation(Population P, int size);
-
-double getPotential(Bitstring bts, SAT sat);
 void update(double a, double b, double mean, Population P, int parity);
 
 /*Added by SPJ 3/17
@@ -204,117 +195,8 @@ int main(int argc, char **argv){
 }
 
 
-int initPopulation(Population *Pptr, FILE *fp){
-  int i,err;
-  Population P;
-
-  if ( (P = (Population) malloc(sizeof(struct population_st))) == NULL) {
-    *Pptr = NULL;
-    return MEMORY_ERROR;
-  }
-
-  if ( (i = loadDIMACSFile(fp,&(P->sat))) == 0 ){
-    freePopulation(&P);
-    *Pptr = NULL;
-    return IO_ERROR;
-  }
-  createSATDerivative(&(P->ds),i,P->sat);
-  setBitLength(i);
-
-  P->psize = 0;
-  
-  if ( (P->walker = (Bitstring *) malloc((2*arraysize)*sizeof(Bitstring))) == NULL ){
-    freePopulation(&P);
-    *Pptr = NULL;
-    return MEMORY_ERROR;
-  }
-
-  for (i=0; i<(2*arraysize); ++i) {
-    if ( (err = initBitstring(P->walker + i)) ) {
-      freePopulation(&P);
-      *Pptr = NULL;
-      return err;
-    }
-  }
-
-  P->avg_v = 0.0;
-  P->max_v = 0.0;
-  P->min_v = 0.0;
-  
-  *Pptr = P;
-  return 0;
-}
-
-void freePopulation(Population *Pptr){
-  int j;
-  if ( *Pptr != NULL ) {
-    if ( (*Pptr)->sat != NULL )
-      freeSAT(&((*Pptr)->sat));
-    if ( (*Pptr)->ds != NULL )
-      freeSATDerivative(&((*Pptr)->ds));
-    if ( (*Pptr)->walker != NULL ) {
-      for (j=0; j<(2*arraysize); ++j)
-        freeBitstring((*Pptr)->walker + j);
-      free((*Pptr)->walker);
-    }
-    *Pptr = NULL;
-  }
-}
 
 
-int randomPopulation(Population P, int size){
-  int i;
-  double e, avg, min, max;
-  
-  randomBitstring(P->walker[0]);
-  e = getPotential(P->walker[0], P->sat);
-  avg = e;
-  min = e;
-  max = e;
-  P->walker[0]->potential = e;
-  
-  for (i=1; i<size; ++i){
-    randomBitstring(P->walker[i]);
-    e = getPotential(P->walker[i], P->sat);
-    avg += e;
-    if ( e < min )
-      min = e;
-    if ( e > max )
-      max = e;
-    P->walker[i]->potential = e;
-  }
-  
-  P->psize = size;
-  P->avg_v = avg/size;
-  P->max_v = max;
-  P->min_v = min;
-
-  return 0;
-}
-
-
-double getPotential(Bitstring bts, SAT sat){
-  int i,j;
-  int k,l;
-  int p,q,v;
-  word_t r;
-  
-  for (i=v=0; i<sat->num_clauses; ++i) { // Loop through the clauses; set the output to zero.
-    l = sat->clause_length[i];           // Store off the length of the i-th clause.
-    for (j=k=0; j<l; ++j) {              // Loop though the terms in the i-th clause; set truth value to false.
-      p = sat->clause[i][j];             // Store off the j-th term of the i-th clause.
-      q = abs(p);                        // This the index (1-up) of the variable in this term.
-      --q;                               // This is the index (0-up) of the varible in this term.
-      r = bts->node[q/BITS_PER_WORD];    // Get the correct word from the bitstring.
-      r >>= q%BITS_PER_WORD;             // Shift the correct variable value to the lowest bit.
-      r &= 1;                            // Zeroize the other bits.
-      k |= (p > 0) ? r : 1-r;            // If the term is positive the value is kept, otherwise it is negated.
-    }
-    v += (1-k)*sat->clause_weight[i];    // If the clause is _false_ then add in the weight as penalty.
-  }
-  
-  return (double) v;
-}
 
 
 void update(double a, double b, double mean, Population P, int parity){

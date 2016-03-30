@@ -7,6 +7,37 @@
 #include <string.h>
 #include "sat.h"
 
+
+int initSAT(SAT *sat_ptr, int ncls){
+  SAT sat;
+  
+  if ( (sat = (SAT) malloc(sizeof(struct sat_st))) == NULL ) {
+    (*sat_ptr) = NULL;
+    return MEMORY_ERROR;
+  }
+  
+  sat->num_clauses = ncls;
+  if ( (sat->clause_weight = (int *) calloc(ncls,sizeof(int))) == NULL ) {
+    freeSAT(&sat);
+    *sat_ptr = NULL;
+    return MEMORY_ERROR;
+  }
+  if ( (sat->clause_length = (int *) calloc(ncls,sizeof(int))) == NULL ) {
+    freeSAT(&sat);
+    *sat_ptr = NULL;
+    return MEMORY_ERROR;
+  }
+  if ( (sat->clause = (int **) calloc(ncls,sizeof(int *))) == NULL ) {
+    freeSAT(&sat);
+    *sat_ptr = NULL;
+    return MEMORY_ERROR;
+  }
+  
+  (*sat_ptr) = sat;
+  return 0;
+}
+
+
 // Comparison routine for quicksort.
 int abscompare(const int *a, const int *b){
   int i = *a;
@@ -172,34 +203,29 @@ void printSAT(FILE *fp, int nvars, SAT sat){
   }
 }
 
-int initSAT(SAT *sat_ptr, int ncls){
-  SAT sat;
+double getPotential(Bitstring bts, SAT sat){
+  int i,j;
+  int k,l;
+  int p,q,v;
+  word_t r;
   
-  if ( (sat = (SAT) malloc(sizeof(struct sat_st))) == NULL ) {
-    (*sat_ptr) = NULL;
-    return MEMORY_ERROR;
-  }
-  
-  sat->num_clauses = ncls;
-  if ( (sat->clause_weight = (int *) calloc(ncls,sizeof(int))) == NULL ) {
-    freeSAT(&sat);
-    *sat_ptr = NULL;
-    return MEMORY_ERROR;
-  }
-  if ( (sat->clause_length = (int *) calloc(ncls,sizeof(int))) == NULL ) {
-    freeSAT(&sat);
-    *sat_ptr = NULL;
-    return MEMORY_ERROR;
-  }
-  if ( (sat->clause = (int **) calloc(ncls,sizeof(int *))) == NULL ) {
-    freeSAT(&sat);
-    *sat_ptr = NULL;
-    return MEMORY_ERROR;
+  for (i=v=0; i<sat->num_clauses; ++i) { // Loop through the clauses; set the output to zero.
+    l = sat->clause_length[i];           // Store off the length of the i-th clause.
+    for (j=k=0; j<l; ++j) {              // Loop though the terms in the i-th clause; set truth value to false.
+      p = sat->clause[i][j];             // Store off the j-th term of the i-th clause.
+      q = abs(p);                        // This the index (1-up) of the variable in this term.
+      --q;                               // This is the index (0-up) of the varible in this term.
+      r = bts->node[q/BITS_PER_WORD];    // Get the correct word from the bitstring.
+      r >>= q%BITS_PER_WORD;             // Shift the correct variable value to the lowest bit.
+      r &= 1;                            // Zeroize the other bits.
+      k |= (p > 0) ? r : 1-r;            // If the term is positive the value is kept, otherwise it is negated.
+    }
+    v += (1-k)*sat->clause_weight[i];    // If the clause is _false_ then add in the weight as penalty.
   }
   
-  (*sat_ptr) = sat;
-  return 0;
+  return (double) v;
 }
+
 
 int createSATDerivative(DSAT *dsat_ptr, int nvars, SAT sat){
   int i,j,k,l;
