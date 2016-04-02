@@ -1,7 +1,7 @@
 /** @file  population.h
  * @brief Header file for a population.
  *
- * Created by Brad Lackey on 3/30/16. Last modified 3/30/16.
+ * Created by Brad Lackey on 3/30/16. Last modified 4/2/16.
  */
 
 #ifndef population_h
@@ -36,8 +36,8 @@ struct population_st {
 };
 
 // Memory management routines.
-int initPopulation(Population *Pptr, FILE *fp);  ///< Create a population, and load its SAT instance from a file and compute the derivative.
-void freePopulation(Population *Pptr);           ///< Deallocation routine for a population.
-int randomPopulation(Population P, int size);    ///< Initialize a population of size \a size with random walkers.
+int initPopulation(Population *Pptr, SAT sat);  ///< Create a population from its SAT instance.
+void freePopulation(Population *Pptr);          ///< Deallocation routine for a population.
+void randomPopulation(Population P, int size);  ///< Initialize a population of size \a size with random walkers.
 
 #endif /* population_h */

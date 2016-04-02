@@ -1,10 +1,11 @@
 /** @file  bitstring.c
  * @brief Source file for a weighted bitstring.
  *
- * Created by Brad Lackey on 3/14/16. Last modified 3/30/16.
+ * Created by Brad Lackey on 3/14/16. Last modified 4/2/16.
  */
 
 #include <stdio.h>
+#include <string.h>
 #include "bitstring.h"
 
 /**
@@ -20,6 +21,28 @@ int setBitLength(int num_bits){
   nbts = num_bits;
   blen = (num_bits-1)/BITS_PER_WORD + 1;
   return 0;
+}
+
+/**
+ * This prints the bitstring in the format demanded by the MaxSAT competition:
+ * namely bits are numbered 1,2,3,4,... and we output -x if bit x is 0 and output x if bit x is 1.
+ * @param fp is the file stream to put the output (typically stdout).
+ * @param bst is the instance to be printed.
+ * @return None.
+ */
+void printBits(FILE *fp, Bitstring bst) {
+  int i;
+  int val;
+  
+  fprintf(fp,"o %i\n", (int) bst->potential);
+  fprintf(fp,"v ");
+  
+  for(i = 0; i < nbts; i++) {
+    val = bst->node[i/BITS_PER_WORD] >> (i % BITS_PER_WORD);
+    if(val%2) fprintf(fp,"%i ", i+1);
+    else fprintf(fp,"%i ", -(i+1));
+  }
+  printf("\n");
 }
 
 
@@ -96,20 +119,16 @@ int randomBitstring(Bitstring bst){
  * The weight is also copied.
  * @param bst_out is the location of new copy.
  * @param bst_int is the instance to be copied.
- * @return Zero.
+ * @return None.
  */
-int copyBitstring(Bitstring bst_out, Bitstring bst_in){
+void copyBitstring(Bitstring bst_out, Bitstring bst_in){
   int i;
   
   // Copy each element of the array.
-  for (i=0; i<blen; ++i) {
-    bst_out->node[i] = bst_in->node[i];
-  }
+  for (i=0; i<blen; ++i) bst_out->node[i] = bst_in->node[i];
   
   // Copy the weight.
   bst_out->potential = bst_in->potential;
-  
-  return 0;
 }
 
 /**
@@ -139,28 +158,5 @@ int randomBitFlip(Bitstring bst_out, Bitstring bst_in){
   
   // Return the bit that was flipped.
   return (1-2*((int) j))*(i+1);
-}
-
-// Added by SPJ 3/17/16
-/**
- * This prints the bitstring in the format demanded by the MaxSAT competition:
- * namely bits are numbered 1,2,3,4,... and we output -x if bit x is 0 and output x if bit x is 1.
- * @param fp is the file stream to put the output (typically stdout).
- * @param bst is the instance to be printed.
- * @return None.
- */
-void printBits(FILE *fp, Bitstring bst) {
-  int i;
-  int val;
-  
-  fprintf(fp,"o %i\n", (int) bst->potential);
-  fprintf(fp,"v ");
-
-  for(i = 0; i < nbts; i++) {
-    val = bst->node[i/BITS_PER_WORD] >> (i % BITS_PER_WORD);
-    if(val%2) fprintf(fp,"%i ", i+1);
-    else fprintf(fp,"%i ", -(i+1));
-  }
-  printf("\n");
 }
 

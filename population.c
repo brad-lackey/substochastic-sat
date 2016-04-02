@@ -1,7 +1,7 @@
 /** @file  population.c
  * @brief Source file for a population.
  *
- * Created by Brad Lackey on 3/30/16. Last modified 3/30/16.
+ * Created by Brad Lackey on 3/30/16. Last modified 4/2/16.
  */
 
 #include <stdio.h>
@@ -11,17 +11,16 @@
 
 
 /**
- * This creates a population, reads in its associated SAT problem, and computes the derivative.
- * The problem instance must be a standard DIMACS formatted file, pointed to by \a fp.
+ * This creates a population from the passed SAT instance, and computes and stores the derivative of that SAT instance too.
  * The amount of memory assigned to the population is an global integer \a arraysize.
  * Note the population size is dynamics, and so enough memory must be assigned.
  * WARNING: there are currently no checks to ensure the population does not die off entirely, or overflow the array!
  * However in the current implementation of the \a update routine, it is highly unlikely that the population size grows/shrinks by more that a few percent of its initial size.
  * @param Pptr points to the population to be created.
- * @param fp points to the file to be read.
- * @return Zero if successful, error code if failed.
+ * @param sat is the underlying SAT instance.
+ * @return Zero if successful, error code(s) if failed.
  */
-int initPopulation(Population *Pptr, FILE *fp){
+int initPopulation(Population *Pptr, SAT sat){
   int i,err;
   Population P;
   
@@ -30,16 +29,11 @@ int initPopulation(Population *Pptr, FILE *fp){
     return MEMORY_ERROR;
   }
   
-  if ( (i = loadDIMACSFile(fp,&(P->sat))) == 0 ){
-    freePopulation(&P);
-    *Pptr = NULL;
-    return IO_ERROR;
-  }
-  createSATDerivative(&(P->ds),i,P->sat);
-  setBitLength(i);
+  P->sat = sat;
+  createSATDerivative(&(P->ds),sat);
   
   P->psize = 0;
-  
+
   if ( (P->walker = (Bitstring *) malloc((2*arraysize)*sizeof(Bitstring))) == NULL ){
     freePopulation(&P);
     *Pptr = NULL;
@@ -100,9 +94,9 @@ void freePopulation(Population *Pptr){
  * If one changes the driving Hamiltonian, then this routine will likely need to be modified.
  * @param P is the population to be initialized.
  * @param size is the initial size of the population.
- * @return Zero.
+ * @return None.
  */
-int randomPopulation(Population P, int size){
+void randomPopulation(Population P, int size){
   int i, argmin;
   double e, avg, min, max;
   
@@ -133,7 +127,5 @@ int randomPopulation(Population P, int size){
   P->min_v = min;
   
   copyBitstring(P->winner, P->walker[argmin]);
-  
-  return 0;
 }
 

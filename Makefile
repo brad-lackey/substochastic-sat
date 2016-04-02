@@ -6,6 +6,7 @@ all : substochastic verify process
 
 substochastic : substochastic.c bitstring.o sat.o population.o
 	$(CC) $(CFLAGS) substochastic.c bitstring.o sat.o population.o -lm -o substochastic
+	strip substochastic
 
 verify : verify.c
 	$(CC) -Wall verify.c -o verify

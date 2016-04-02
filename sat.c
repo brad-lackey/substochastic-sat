@@ -1,14 +1,23 @@
 /** @file  sat.c
  * @brief Source file for a SAT potential type in the Substochastic library.
  *
- * Created by Brad Lackey on 3/14/16. Last modified 3/30/16.
+ * Created by Brad Lackey on 3/14/16. Last modified 4/2/16.
  */
 
 #include <string.h>
 #include "sat.h"
 
 
-int initSAT(SAT *sat_ptr, int ncls){
+/**
+ * A SAT instance is initialized.
+ * Memory is allocated based on the number of clauses passed by \a ncls.
+ * The number of variables is stored in the structure but not used here.
+ * @param sat_ptr points to the SAT structure.
+ * @param nvars is the number of variables in the instance.
+ * @param ncls is the number of clauses in the instance.
+ * @return Zero if successful, error code(s) if failed.
+ */
+int initSAT(SAT *sat_ptr, int nvars, int ncls){
   SAT sat;
   
   if ( (sat = (SAT) malloc(sizeof(struct sat_st))) == NULL ) {
@@ -16,6 +25,7 @@ int initSAT(SAT *sat_ptr, int ncls){
     return MEMORY_ERROR;
   }
   
+  sat->num_vars = nvars;
   sat->num_clauses = ncls;
   if ( (sat->clause_weight = (int *) calloc(ncls,sizeof(int))) == NULL ) {
     freeSAT(&sat);
@@ -102,37 +112,43 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
   int nvars,ncls;
   
   
+  // First skip down until the parameter line is found.
   while ( (linelen = getline(&line, &linecap, fp)) > 0 ){
     if (line[0] != 'p') continue;
+    
+    // Read in the parameter line.
     if ( (type = parseHeader(line,&nvars,&ncls)) < 0 ) {
       *sat_ptr = NULL;
-      return 0;
+      return IO_ERROR;
     }
     
-//    if ( type == 0 ){
-//      printf("Loading SAT file...\n");
-//    }
-//    if ( type == 1 ){
-//      printf("Loading weighted SAT file...\n");
-//    }
-
+    // Now create the SAT instance with the given number of variables and clauses.
+    if ( initSAT(&sat, nvars, ncls) ) {
+      *sat_ptr = NULL;
+      return MEMORY_ERROR;
+    }
+    
+    // Create a large enough buffer to read in clause lines for the instance.
     if ( (buf = (int *) malloc(nvars*sizeof(int))) == NULL ) {
       *sat_ptr = NULL;
-      return 0;
-    }
-    if ( initSAT(&sat, ncls) ) {
-      *sat_ptr = NULL;
-      return 0;
+      return MEMORY_ERROR;
     }
     break;
   }
   
+  // Now start reading in clause lines.
   for (i=0; i<sat->num_clauses; ++i) {
     if ( (linelen = getline(&line, &linecap, fp)) <= 0 ) {
       freeSAT(&sat);
       free(buf);
       *sat_ptr = NULL;
-      return 0;
+      return IO_ERROR;
+    }
+    
+    // Skip over a comment line. (Why have these in the body of the file anyway?)
+    if (line[0] == 'c') {
+      --i;
+      continue;
     }
     
     if ( type == 1 ) {                // We need to read off the variable weight first.
@@ -142,17 +158,21 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
       off = 0;
     }
     
+    // Now read in the terms.
     for (j=0; j<nvars; ++j) {
       sscanf(line+off,"%d%n",buf+j,&k);
       off += k;
       if (buf[j] == 0) break;
     }
     
+    // Some files were not preprocessed and so need tautology removal.
     j = dedupe(buf,j);
-    if (j == 0) {
+    
+    
+    if (j == 0) {                 // Then this clause is tautology and can be removed.
       --i;
       --(sat->num_clauses);
-    } else {
+    } else {                      // Otherwise copy the buffer into the instance.
       sat->clause_weight[i] = w;
       sat->clause_length[i] = j;
       sat->clause[i] = (int *) malloc(j*sizeof(int));
@@ -162,9 +182,10 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
     }
   }
   
+  // Point to our newly minted instance and free the buffer memory.
   *sat_ptr = sat;
   free(buf);
-  return nvars;
+  return 0;
 }
 
 /**
@@ -191,10 +212,10 @@ void freeSAT(SAT *sat_ptr){
 }
 
 // Don't look at this.
-void printSAT(FILE *fp, int nvars, SAT sat){
+void printSAT(FILE *fp, SAT sat){
   int i,j;
   
-  fprintf(fp, "p wcnf %d %d\n", nvars, sat->num_clauses);
+  fprintf(fp, "p wcnf %d %d\n", sat->num_vars, sat->num_clauses);
   for (i=0; i<sat->num_clauses; ++i) {
     fprintf(fp, "%d ",sat->clause_weight[i]);
     for (j=0; j<sat->clause_length[i]; ++j)
@@ -203,37 +224,48 @@ void printSAT(FILE *fp, int nvars, SAT sat){
   }
 }
 
+/**
+ * We need to return the potential as the sum of the weights of the failed clauses.
+ * This is in the innermost loop of the algorithm so needs to be heavily optimized.
+ * @param bst is the bitstring on which we compute the potential.
+ * @param sat is the SAT instance that holds the potential.
+ * @return The potential value.
+ */
 double getPotential(Bitstring bts, SAT sat){
   int i,j;
   int k,l;
   int p,q,v;
   word_t r;
   
-  for (i=v=0; i<sat->num_clauses; ++i) { // Loop through the clauses; set the output to zero.
-    l = sat->clause_length[i];           // Store off the length of the i-th clause.
-    for (j=k=0; j<l; ++j) {              // Loop though the terms in the i-th clause; set truth value to false.
-      p = sat->clause[i][j];             // Store off the j-th term of the i-th clause.
-      q = abs(p);                        // This the index (1-up) of the variable in this term.
-      --q;                               // This is the index (0-up) of the varible in this term.
-      r = bts->node[q/BITS_PER_WORD];    // Get the correct word from the bitstring.
-      r >>= q%BITS_PER_WORD;             // Shift the correct variable value to the lowest bit.
-      r &= 1;                            // Zeroize the other bits.
-      k |= (p > 0) ? r : 1-r;            // If the term is positive the value is kept, otherwise it is negated.
+  for (i=v=0; i<sat->num_clauses; ++i) {   // Loop through the clauses; set the output to zero.
+    l = sat->clause_length[i];             // Store off the length of the i-th clause.
+    for (j=0, k=1; j<l; ++j) {             // Loop though the terms in the i-th clause; set truth value to false. (Note: k is really ~k)
+      p = sat->clause[i][j];               // Store off the j-th term of the i-th clause.
+      q = abs(p)-1;                        // This the index of the variable in this term.
+      r = bts->node[q/BITS_PER_WORD];      // Get the correct word from the bitstring.
+      k &= (p > 0)^(r>>(q%BITS_PER_WORD)); // If the term is positive the value is kept, otherwise it is negated. (Note: k is really ~k)
     }
-    v += (1-k)*sat->clause_weight[i];    // If the clause is _false_ then add in the weight as penalty.
+    k &= 1;
+    v += k*sat->clause_weight[i];          // If the clause is _false_ then add in the weight as penalty. (Note: k is really ~k)
   }
   
   return (double) v;
 }
 
-
-int createSATDerivative(DSAT *dsat_ptr, int nvars, SAT sat){
+/**
+ * A SAT derivative instance is initialized, and computed from the passed SAT instance.
+ * The underlying SAT instance may or may not be weighted, but the derivative always is weighted.
+ * @param dsat_ptr points to the SAT derivative structure to be created.
+ * @param sat is the SAT instance to be differentiated.
+ * @return Zero if successful, error code(s) if failed.
+ */
+int createSATDerivative(DSAT *dsat_ptr, SAT sat){
   int i,j,k,l;
   int *clen;
   SAT temp;
   DSAT dsat;
   
-  if ( (clen = (int *) calloc(nvars,sizeof(int))) == NULL ) {
+  if ( (clen = (int *) calloc(sat->num_vars,sizeof(int))) == NULL ) {
     (*dsat_ptr) = NULL;
     return MEMORY_ERROR;
   }
@@ -243,14 +275,14 @@ int createSATDerivative(DSAT *dsat_ptr, int nvars, SAT sat){
     return MEMORY_ERROR;
   }
   
-  dsat->num_vars = nvars;
-  if ( (dsat->der = (SAT *) malloc(nvars*sizeof(SAT))) == NULL) {
+  dsat->num_vars = sat->num_vars;
+  if ( (dsat->der = (SAT *) malloc(sat->num_vars*sizeof(SAT))) == NULL) {
     free(clen);
     free(dsat);
     (*dsat_ptr) = NULL;
     return MEMORY_ERROR;
   }
-
+  
   
   for (i=0; i<sat->num_clauses; ++i) {
     for (j=0; j<sat->clause_length[i]; ++j) {
@@ -259,8 +291,8 @@ int createSATDerivative(DSAT *dsat_ptr, int nvars, SAT sat){
     }
   }
   
-  for (i=0; i<nvars; ++i){
-    initSAT(dsat->der + i, clen[i]);
+  for (i=0; i<sat->num_vars; ++i){
+    initSAT(dsat->der + i, 0, clen[i]);
     clen[i] = 0;
   }
   
@@ -284,13 +316,17 @@ int createSATDerivative(DSAT *dsat_ptr, int nvars, SAT sat){
         temp->clause[l][k] = sat->clause[i][k+1];
     }
   }
-
+  
   (*dsat_ptr) = dsat;
   free(clen);
   
   return 0;
 }
 
+/**
+ * @param dsat_ptr points to the SAT derivative instance to be destroyed.
+ * @return None.
+ */
 void freeSATDerivative(DSAT *dsat_ptr){
   int i;
   
