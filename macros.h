@@ -32,6 +32,7 @@ typedef unsigned long word_t;
 #define UNWEIGHTED_4_SAT 12
 
 #define WEIGHTED_2_SAT 30
+#define WEIGHTED_3_SAT 31
 
 
 #endif

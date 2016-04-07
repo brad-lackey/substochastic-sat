@@ -167,7 +167,7 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   if ( argc <= 4 ) {
     
     
-    if ( problem_type == UNKNOWN ) {
+    if ( (problem_type == UNKNOWN) || (problem_type == UNWEIGHTED_4_SAT) ) {
       weight = 0.50;
       runtime = 10000.0;
       runstep = 0.0;
@@ -182,10 +182,10 @@ int parseCommand(int argc, char **argv, Population *Pptr){
       popsize = 16;
     }
     
-    if ( problem_type == UNWEIGHTED_3_SAT ) {
-      weight = 0.09;
+    if ( (problem_type == UNWEIGHTED_3_SAT) || (problem_type == WEIGHTED_3_SAT) ) {
+      weight = 0.16;
       runtime = exp(0.010*sat->num_vars + 8.9)/weight;
-      runstep = exp(0.008*sat->num_vars + 6.0)/weight;
+      runstep = exp(0.010*sat->num_vars + 5.8)/weight;
       popsize = 16;
     }
     

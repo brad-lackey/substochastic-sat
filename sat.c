@@ -245,9 +245,14 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
   
   if ( type == 0 ) { // This is an unweighted max-sat problem.
     
+    if ( avg_cls_length <= 4 ) {
+      problem_type = UNWEIGHTED_4_SAT;
+    }
+
     if ( avg_cls_length <= 3 ) {
       problem_type = UNWEIGHTED_3_SAT;
     }
+
     if ( avg_cls_length <= 2) {
       problem_type = UNWEIGHTED_2_SAT;
     }
@@ -256,6 +261,10 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
   
   if ( type == 2 ){ // This is a weighted max-sat problem.
     
+    if ( avg_cls_length <= 3) {
+      problem_type = WEIGHTED_3_SAT;
+    }
+
     if ( avg_cls_length <= 2) {
       problem_type = WEIGHTED_2_SAT;
     }
