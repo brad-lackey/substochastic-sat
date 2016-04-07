@@ -1,10 +1,11 @@
 /** @file  sat.c
  * @brief Source file for a SAT potential type in the Substochastic library.
  *
- * Created by Brad Lackey on 3/14/16. Last modified 4/2/16.
+ * Created by Brad Lackey on 3/14/16. Last modified 4/7/16.
  */
 
 #include <string.h>
+#include <math.h>
 #include "sat.h"
 
 
@@ -43,6 +44,14 @@ int initSAT(SAT *sat_ptr, int nvars, int ncls){
     return MEMORY_ERROR;
   }
   
+#if TRACK_GLOBAL_BIASES
+  if ( (sat->global_bias = (double *) calloc(nvars,sizeof(double))) == NULL ) {
+    freeSAT(&sat);
+    *sat_ptr = NULL;
+    return MEMORY_ERROR;
+  }
+#endif
+
   (*sat_ptr) = sat;
   return 0;
 }
@@ -73,25 +82,30 @@ int dedupe(int *buffer, int size){
 
 // Parse out the type of problem and parameters.
 int parseHeader(char *line, int *nv, int *nc){
+  int argc;
   char prob[50];
-  int nvars, ncls;
+  int nvars, ncls, maxw;
   
   // Scan the line and if it does not have the right form: reject.
-  if ( sscanf(line, "p %s %d %d", prob, &nvars, &ncls) != 3 )
+  if ( (argc = sscanf(line, "p %s %d %d %d", prob, &nvars, &ncls, &maxw)) < 3 ){
     return -1;
+  }
   
-  if ( strcmp(prob,"cnf") == 0 ){
-    *nv = nvars;
-    *nc = ncls;
+  *nv = nvars;
+  *nc = ncls;
+
+  if ( strcmp(prob,"cnf") == 0 ){ // Then this is a unweighted max-sat instance.
     return 0;
   }
   
   if ( strcmp(prob,"wcnf") == 0 ){
-    *nv = nvars;
-    *nc = ncls;
-    return 1;
+    if ( argc == 3 ) { // Then this is a weighted max-sat instance.
+      return 2;
+    } else {           // Then this is a partial max-sat instance.
+      return 1;
+    }
   }
-
+  
   return -1;
 }
 
@@ -110,7 +124,10 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
   size_t linecap = 0;
   ssize_t linelen;
   int nvars,ncls;
-  
+  int avg_cls_length = 0;
+#if TRACK_GLOBAL_BIASES
+  int *total_weight;
+#endif
   
   // First skip down until the parameter line is found.
   while ( (linelen = getline(&line, &linecap, fp)) > 0 ){
@@ -133,6 +150,16 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
       *sat_ptr = NULL;
       return MEMORY_ERROR;
     }
+    
+#if TRACK_GLOBAL_BIASES
+    if ( (total_weight = (int *) calloc(nvars,sizeof(int))) == NULL ) {
+      free(buf);
+      *sat_ptr = NULL;
+      return MEMORY_ERROR;
+    }
+#endif
+    
+    
     break;
   }
   
@@ -141,6 +168,9 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
     if ( (linelen = getline(&line, &linecap, fp)) <= 0 ) {
       freeSAT(&sat);
       free(buf);
+#if TRACK_GLOBAL_BIASES
+      free(total_weight);
+#endif
       *sat_ptr = NULL;
       return IO_ERROR;
     }
@@ -151,13 +181,14 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
       continue;
     }
     
-    if ( type == 1 ) {                // We need to read off the variable weight first.
-      sscanf(line,"%d%n",&w,&off);
-    } else {                          // We can read from the beginning of the line.
+    
+    if ( type == 0 ) {                // We can read from the beginning of the line.
       w = 1;
       off = 0;
+    } else {                          // We need to read off the variable weight first.
+      sscanf(line,"%d%n",&w,&off);
     }
-    
+
     // Now read in the terms.
     for (j=0; j<nvars; ++j) {
       sscanf(line+off,"%d%n",buf+j,&k);
@@ -175,16 +206,62 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
     } else {                      // Otherwise copy the buffer into the instance.
       sat->clause_weight[i] = w;
       sat->clause_length[i] = j;
+      avg_cls_length += j;
       sat->clause[i] = (int *) malloc(j*sizeof(int));
       for (j=0; j<sat->clause_length[i]; ++j) {
         sat->clause[i][j] = buf[j];
+#if TRACK_GLOBAL_BIASES
+        if( buf[j] > 0 ){ // then this variable prefers to be true in this clause...
+          sat->global_bias[buf[j]-1] += -w; // so it gets a penalty if it is set to false.
+          total_weight[buf[j]-1] += abs(w);
+        } else {          // then it would rather be false...
+          sat->global_bias[(-buf[j])-1] += w; // so it gets a penalty if it is set to true.
+          total_weight[(-buf[j])-1] += abs(w);
+        }
+#endif
       }
     }
   }
   
+#if TRACK_GLOBAL_BIASES
+  for (j=0; j<sat->num_vars; ++j) {
+    if ( total_weight[j] > 0 ) {
+      sat->global_bias[j] = (total_weight[j] + INITIAL_BUILD_RELAXATION*sat->global_bias[j])/(2*total_weight[j]);
+    } else{
+      sat->global_bias[j] = 0.5;
+    }
+  }
+  free(total_weight);
+#endif
+  
   // Point to our newly minted instance and free the buffer memory.
   *sat_ptr = sat;
   free(buf);
+  
+  // Finalize our problem type.
+  
+  avg_cls_length = (int) round(((double) avg_cls_length)/sat->num_clauses);
+  problem_type = UNKNOWN;
+  
+  if ( type == 0 ) { // This is an unweighted max-sat problem.
+    
+    if ( avg_cls_length <= 3 ) {
+      problem_type = UNWEIGHTED_3_SAT;
+    }
+    if ( avg_cls_length <= 2) {
+      problem_type = UNWEIGHTED_2_SAT;
+    }
+    
+  }
+  
+  if ( type == 2 ){ // This is a weighted max-sat problem.
+    
+    if ( avg_cls_length <= 2) {
+      problem_type = WEIGHTED_2_SAT;
+    }
+    
+  }
+
   return 0;
 }
 
@@ -206,6 +283,11 @@ void freeSAT(SAT *sat_ptr){
     if ( (*sat_ptr)->clause_weight != NULL ) {
       free((*sat_ptr)->clause_weight);
     }
+#if TRACK_GLOBAL_BIASES
+    if ( (*sat_ptr)->global_bias != NULL ) {
+      free((*sat_ptr)->global_bias);
+    }
+#endif
     free(*sat_ptr);
     *sat_ptr = NULL;
   }
@@ -231,7 +313,7 @@ void printSAT(FILE *fp, SAT sat){
  * @param sat is the SAT instance that holds the potential.
  * @return The potential value.
  */
-double getPotential(Bitstring bts, SAT sat){
+int getPotential(Bitstring bts, SAT sat){
   int i,j;
   int k,l;
   int p,q,v;
@@ -249,7 +331,7 @@ double getPotential(Bitstring bts, SAT sat){
     v += k*sat->clause_weight[i];          // If the clause is _false_ then add in the weight as penalty. (Note: k is really ~k)
   }
   
-  return (double) v;
+  return v;
 }
 
 /**

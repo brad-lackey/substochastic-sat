@@ -31,8 +31,8 @@ struct population_st {
   Bitstring *walker;   ///< Array of bitstrings that form the population.
   Bitstring winner;    ///< A copy of the best walker yet found.
   double avg_v;        ///< Average potential for the population.
-  double max_v;        ///< Maximum potential for the population.
-  double min_v;        ///< Minimum potential for the population.
+  int max_v;        ///< Maximum potential for the population.
+  int min_v;        ///< Minimum potential for the population.
 };
 
 // Memory management routines.

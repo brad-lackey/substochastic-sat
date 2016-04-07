@@ -1,7 +1,7 @@
 /** @file  population.c
  * @brief Source file for a population.
  *
- * Created by Brad Lackey on 3/30/16. Last modified 4/2/16.
+ * Created by Brad Lackey on 3/30/16. Last modified 4/7/16.
  */
 
 #include <stdio.h>
@@ -55,8 +55,8 @@ int initPopulation(Population *Pptr, SAT sat){
   }
   
   P->avg_v = 0.0;
-  P->max_v = 0.0;
-  P->min_v = 0.0;
+  P->max_v = 0;
+  P->min_v = 0;
   
   *Pptr = P;
   return 0;
@@ -98,8 +98,24 @@ void freePopulation(Population *Pptr){
  */
 void randomPopulation(Population P, int size){
   int i, argmin;
-  double e, avg, min, max;
+  int e, min, max;
+  double avg;
   
+#if TRACK_GLOBAL_BIASES
+  int j;
+  word_t u;
+  
+  for (j=0; j<blen; ++j) {
+    P->walker[0]->node[j] = (word_t) 0;
+  }
+  for (j=0; j<nbts; ++j) {
+    u = (word_t) (drand48() > P->sat->global_bias[j]);
+    P->walker[0]->node[j/BITS_PER_WORD] ^= u << (j % BITS_PER_WORD);
+  }
+#else
+  randomBitstring(P->walker[0]);
+#endif
+
   randomBitstring(P->walker[0]);
   e = getPotential(P->walker[0], P->sat);
   avg = e;
@@ -109,6 +125,19 @@ void randomPopulation(Population P, int size){
   P->walker[0]->potential = e;
   
   for (i=1; i<size; ++i){
+    
+#if TRACK_GLOBAL_BIASES
+    for (j=0; j<blen; ++j) {
+      P->walker[i]->node[j] = (word_t) 0;
+    }
+    for (j=0; j<nbts; ++j) {
+      u = (word_t) (drand48() > P->sat->global_bias[j]);
+      P->walker[i]->node[j/BITS_PER_WORD] ^= u << (j % BITS_PER_WORD);
+    }
+#else
+    randomBitstring(P->walker[i]);
+#endif
+    
     randomBitstring(P->walker[i]);
     e = getPotential(P->walker[i], P->sat);
     avg += e;

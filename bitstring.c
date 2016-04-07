@@ -34,7 +34,7 @@ void printBits(FILE *fp, Bitstring bst) {
   int i;
   int val;
   
-  fprintf(fp,"o %i\n", (int) bst->potential);
+  fprintf(fp,"o %i\n", bst->potential);
   fprintf(fp,"v ");
   
   for(i = 0; i < nbts; i++) {
@@ -67,7 +67,7 @@ int initBitstring(Bitstring *bst_ptr){
   }
   
   // Initialize the potential to be negative, and pass the created bitstring to output.
-  bst->potential = -1.0;
+  bst->potential = -1;
   (*bst_ptr) = bst;
   
   return 0;

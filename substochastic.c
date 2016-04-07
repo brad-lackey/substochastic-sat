@@ -1,7 +1,7 @@
 /** @file  substochastic.c
  * @brief Main file for Substochastic Monte Carlo.
  *
- * Created by Brad Lackey on 3/14/16. Last modified 4/2/16.
+ * Created by Brad Lackey on 3/14/16. Last modified 4/7/16.
  */
 
 #include <stdio.h>
@@ -19,73 +19,39 @@
 //declaration of getline() and round().
 #define _GNU_SOURCE
 
-#define TEST 1
-
+extern int blen;
 extern int nbts;
 extern int arraysize;
+extern int problem_type;
 
 static int popsize;
+static double weight, runtime, runstep;
+static int optimal;
+
 
 void update(double a, double b, double mean, Population P, int parity);
-int parseCommand(int argc, char **argv, Population *Pptr, double *weight, double *runtime, int *trials, double *starttime);
+int parseCommand(int argc, char **argv, Population *Pptr);
 
-
-/*Added by SPJ 3/17
- *Returns the average number of variables per clause.
- */
-double avgLength(SAT instance) {
-  int c;
-  int total;
-  total = 0;
-  for(c = 0; c < instance->num_clauses; c++) total += instance->clause_length[c];
-  return (double)total/(double)instance->num_clauses;
-}
-
-/*Added by SPJ 3/17
- *Automatically chooses parameters, such as runtime and number of trials.
- */
-void autoparam(double varsperclause, int vars, double *weight, double *runtime, int *trials, double *starttime) {
-  int k;
-  k = (int)round(varsperclause);
-  //*weight = 1.0;
-  *weight = 100.0; // Changed since weight now percent -- Michael 3/30/16
-  *trials = 5; //default
-  *starttime = 0.0; // default -- Michael 3/30/16
-  if(k == 2) {
-    //These values are determined using the experimental results in
-    //summary_2sat120v.txt and summary_2sat200v.txt.
-    *trials = 10;
-    *runtime = 3.2E4;
-  }
-  if(k == 3) {
-    //These values are determined using the experimental results in
-    //summary_3sat70v.txt and summary3sat110vlong.txt.
-    *trials = 5;
-    *runtime = 223.0*exp(0.07*vars);
-  }
-  if(k == 4 || vars > 200) {
-    //This overrides the above.
-    //Just go for broke and use up all the time.
-    *trials = 5;
-    *runtime = 3E6;
-  }
-}
 
 int main(int argc, char **argv){
-  int parity, trials, try, err;
-  double weight, runtime, mean, starttime;
+  int parity, try, err;
+  double mean;
   double a, b, t, dt;
   Population pop;
-  double min = -1.0;    //the best minimum from different trials
+  double min = -1;      //the best minimum from different trials
   Bitstring solution;   //the corresponding bitstring
   clock_t beg, end;     //for code timing
   double time_spent;    //for code timing
   
+#if TRACK_GLOBAL_BIASES
+  int i;
+  word_t u;
+#endif
   
   
   beg = clock();
   
-  if ( (err = parseCommand(argc, argv, &pop, &weight, &runtime, &trials, &starttime)) ){
+  if ( (err = parseCommand(argc, argv, &pop)) ){
     return err;
   }
   
@@ -95,19 +61,20 @@ int main(int argc, char **argv){
   }
   
   
-  for(try = 0; try < trials; try++) {
+  try = 1;
+  while (1) {
     
-    t = starttime;
+    t = 0.0;
     parity = 0;
     randomPopulation(pop,popsize);
     
     while (t < runtime) {
       
       // The annealing schedule
-      a = weight*(1.0 - t/runtime)/100.0; // Turned weight into percent -- Michael 3/30/16
+      a = weight*(1.0 - t/runtime); // Turned weight into percent -- Michael 3/30/16
       b = (t/runtime);
       
-      mean = pop->avg_v + (pop->max_v - pop->min_v)*(popsize - pop->psize)/(2*popsize);
+      mean = pop->avg_v + (pop->max_v - pop->min_v)*(popsize - pop->psize)/(2.0*popsize);
       
       if ( (pop->max_v - mean) > (mean - pop->min_v) )
         dt = 0.9/(a + b*(pop->max_v - mean));
@@ -123,51 +90,61 @@ int main(int argc, char **argv){
       parity ^= 1;
     }
     
-#if TEST
-    printBits(stdout, pop->winner);
-    if ((min<0) || (pop->winner->potential < min)) {
-      min = pop->winner->potential;
-      copyBitstring(solution, pop->winner);
-    }
-#else
     end = clock();
     time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
+    
     if ((min<0) || (pop->winner->potential < min)) {
+      printBits(stdout, pop->winner);
+      printf("c Walltime: %f seconds, %d loops\n", time_spent, try);
+      fflush(stdout);
       min = pop->winner->potential;
       copyBitstring(solution, pop->winner);
-      printBits(stdout, pop->winner);
-      printf("c Walltime: %f seconds\n", time_spent);
-      fflush(stdout);
+      if (min == optimal) {
+        break;
+      }
     }
-    if ( time_spent > 240 )
+    if ( time_spent > 60 )
       break;
+    
+#if TRACK_GLOBAL_BIASES
+    
+    for (i=0; i<pop->sat->num_vars; ++i) {
+      pop->sat->global_bias[i] *= REMIX_PERCENTAGE;
+      u = pop->winner->node[i/BITS_PER_WORD] >> (i % BITS_PER_WORD);
+      pop->sat->global_bias[i] += (1-REMIX_PERCENTAGE)*(UPDATE_RELAXATION - (2*UPDATE_RELAXATION -1)*(u%2));
+    }
+    
 #endif
     
+    runtime += runstep;
+    try += 1;
   }
   
   freeBitstring(&solution);
-  
-#if TEST
-  end = clock();
-  time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
-  printf("c Walltime: %f seconds\n", time_spent);
-#endif
-  
+
   return 0;
 }
 
 
-int parseCommand(int argc, char **argv, Population *Pptr, double *weight, double *runtime, int *trials, double *starttime){
+int parseCommand(int argc, char **argv, Population *Pptr){
   SAT sat;
   int seed;
-  double varsperclause; //average number of variables per clause
   FILE *fp;
   Population pop;
   
-  if (argc != 7 && argc != 2) {
-    fprintf(stderr, "Usage: %s instance.cnf [<step weight> <runtime> <population size> <trials> <start time>]\n",argv[0]);
+  if ( argc != 2 && argc != 3 && argc != 4 && argc != 6 ) {
+    fprintf(stderr, "Usage: %s <instance.cnf> \n",argv[0]);
+    fprintf(stderr, "Usage: %s <instance.cnf> <optimum>\n",argv[0]);
+    fprintf(stderr, "Usage: %s <instance.cnf> <optimum> <seed>\n",argv[0]);
+    fprintf(stderr, "Usage: %s <instance.cnf> <optimum> <seed> <step weight> <runtime>\n",argv[0]);
     return 2;
   }
+  
+  printf("c ------------------------------------------------------\n");
+  printf("c Substochastic Monte Carlo, version 1.0                \n");
+  printf("c Brad Lackey, Stephen Jordan, and Michael Jarret, 2016.\n");
+  printf("c ------------------------------------------------------\n");
+  printf("c Input: %s\n", argv[1]);
   
   if ( (fp = fopen(argv[1], "r")) == NULL ){
     fprintf(stderr,"Could not open file %s\n",argv[1]);
@@ -182,20 +159,71 @@ int parseCommand(int argc, char **argv, Population *Pptr, double *weight, double
   fclose(fp);
   
   setBitLength(sat->num_vars);
-  varsperclause = avgLength(sat);
   
-  if ( argc == 2 )
-    autoparam(varsperclause, nbts, weight, runtime, trials, starttime);
-  
-  if( argc == 7 ) {
-    *weight = (double) atoi(argv[2]);
-    sscanf(argv[3], "%lf", runtime); //allows scientific notation unlike atoi
-    popsize = atoi(argv[4]);
-    *trials = atoi(argv[5]);
-    *starttime = atoi(argv[6]);
-  } else {
-    popsize = 64;
+  printf("c Bits: %d\n", nbts);
+  printf("c Clauses (after tautology removal): %d\n", sat->num_clauses);
+  printf("c Problem type: %d\n", problem_type);
+
+  if ( argc <= 4 ) {
+    
+    
+    if ( problem_type == UNKNOWN ) {
+      weight = 0.50;
+      runtime = 10000.0;
+      runstep = 0.0;
+      popsize = 16;
+      
+    }
+    
+    if ( (problem_type == UNWEIGHTED_2_SAT) || (problem_type == WEIGHTED_2_SAT) ){
+      weight = 0.18;
+      runtime = exp(0.041*sat->num_vars + 3.5)/weight;
+      runstep = exp(0.025*sat->num_vars + 2.5)/weight;
+      popsize = 16;
+    }
+    
+    if ( problem_type == UNWEIGHTED_3_SAT ) {
+      weight = 0.09;
+      runtime = exp(0.010*sat->num_vars + 8.9)/weight;
+      runstep = exp(0.008*sat->num_vars + 6.0)/weight;
+      popsize = 16;
+    }
+    
+    if ( argc >= 3 ) {
+      
+      optimal = atoi(argv[2]);
+      
+      if ( argc == 4 ) {
+        seed = atoi(argv[3]);
+      } else {
+        seed = time(0);
+      }
+      
+      
+    } else {
+      
+      optimal = 0;
+      seed = time(0);
+      
+    }
+    
+  } else { // This is the timing trials case.
+    
+    optimal = atoi(argv[2]);
+    seed = atoi(argv[3]);
+    sscanf(argv[4], "%lf", &weight);
+    sscanf(argv[5], "%lf", &runtime);
+    weight /= 100.0;
+    runstep = 0.0;
+    popsize = 16;
+    
   }
+  
+  printf("c Population size: %d\n", popsize);
+  printf("c Starting runtime: %.0f\n", runtime);
+  printf("c Runtime step per loop: %.0f\n", runstep);
+  printf("c Step weight: %.3f\n", weight);
+  printf("c Target potential: %d\n", optimal);
   
   arraysize = 10*popsize;
   
@@ -204,22 +232,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, double *weight, double
     return MEMORY_ERROR;
   }
   
-  seed = time(0);
-  //seed = 0; // for testing
   srand48(seed);
-  printf("c ------------------------------------------------------\n");
-  printf("c Substochastic Monte Carlo, version 1.0                \n");
-  printf("c Brad Lackey, Stephen Jordan, and Michael Jarret, 2016.\n");
-  printf("c ------------------------------------------------------\n");
-  printf("c Input: %s\n", argv[1]);
-  printf("c Bits: %d\n", nbts);
-  printf("c Clauses (after tautology removal): %d\n", pop->sat->num_clauses);
-  printf("c Step weight: %f\n", *weight);
-  printf("c Population size: %d\n", popsize);
-  printf("c Runtime: %e\n", *runtime);
-  printf("c Start time: %e\n", *starttime);
-  printf("c Trials: %i\n", *trials);
-  printf("c Variables per clause: %f\n", varsperclause);
   printf("c Seed: %i\n", seed);
   
   *Pptr = pop;
@@ -234,9 +247,9 @@ int parseCommand(int argc, char **argv, Population *Pptr, double *weight, double
 void update(double a, double b, double mean, Population P, int parity){
   int i,j,k;
   double p,e;
-  double min = P->sat->num_clauses;
+  int min = P->sat->num_clauses;
   double avg = 0.0;
-  double max = -(P->sat->num_clauses);
+  int max = -(P->sat->num_clauses);
   int old = parity*arraysize;
   int new = (1-parity)*arraysize;
   

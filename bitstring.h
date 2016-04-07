@@ -26,7 +26,7 @@ typedef struct bitstring_st * Bitstring;
 
 struct bitstring_st {
   word_t *node;                ///< The array that holds the bits.
-  double potential;            ///< The weight associated to this bitstring.
+  int potential;               ///< The weight associated to this bitstring.
 };
 
 // Ancillary routines
