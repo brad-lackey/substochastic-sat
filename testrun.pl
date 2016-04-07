@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-$queue_size = 4;
+$queue_size = 7;
 
 (scalar(@ARGV) == 3) or (scalar(@ARGV) == 5) or die "Usage: ./testrun.pl <data-file> trials tag [\"step weight\" \"runtime\"]\n";
 
@@ -11,7 +11,7 @@ while(<$dat>){
   chomp;
   @a = split;
   for ($t = 0; $t < $ARGV[1]; $t += 1){
-    push(@stack, "./ssmc $a[0] $a[3] $t $ARGV[3] $ARGV[4]");
+    push(@stack, "./ssmc $a[0] $a[3] $t $ARGV[3] $ARGV[4]");  #<--------- Here is where the list of command is created.
   }
   $opt{$a[0]} = $a[3];
   $time{$a[0]} = $a[6];
@@ -26,6 +26,7 @@ for (my $i = scalar(@stack)-1; $i>0; $i -= 1) {
 open(LOG, ">$ARGV[2].log") || die "Could not open log file.\n";
 unlink "$ARGV[2].out";
 
+# Run all the jobs.
 while ( scalar(@stack) > 0 ){
   $job = shift @stack;
 
@@ -63,6 +64,7 @@ while ( scalar(@stack) > 0 ){
   }
 }
 
+# Wait until the last jobs finish.
 while( scalar(keys %queue) > 0 ){
     my $j = wait();
     print LOG $queue{$j}, "\n";
@@ -73,6 +75,7 @@ close(LOG);
 
 open(IN,"<$ARGV[2].out");
 
+# Load up the output file and get the results.
 while( <IN> ){
   chomp;
   @a = split;
@@ -90,6 +93,8 @@ while( <IN> ){
 close(IN);
 
 open(REPORT,">$ARGV[2].txt");
+
+# Produce the final report.
 for $file (sort keys %count){
   print REPORT "$file ";
   printf REPORT "%d/%d(%.0f%%) ",  $hit{$file}, $count{$file}, (100.0*$hit{$file})/$count{$file};
