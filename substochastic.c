@@ -229,7 +229,7 @@ int parseCommand(int argc, char **argv, Population *Pptr){
     weight /= 100.0;
     runstep = 0.0;
     popsize = 16;
-    runmode = 1;
+    runmode = 2;
     
   }
   
