@@ -1,21 +1,32 @@
 #!/usr/bin/perl
 
-$queue_size = 7;
+$queue_size = 6;
 
-(scalar(@ARGV) == 3) or (scalar(@ARGV) == 5) or die "Usage: ./testrun.pl <data-file> trials tag [\"step weight\" \"runtime\"]\n";
+(scalar(@ARGV) == 4) or (scalar(@ARGV) == 6) or die "Usage: ./testrun.pl command <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n";
 
-open($dat, "<", $ARGV[0]);
+# Just to be completely clear:
+$command = $ARGV[0];
+$filelist = $ARGV[1];
+$trials = $ARGV[2];
+$tag = $ARGV[3];
+$weight = $ARGV[4];
+$runtime = $ARGV[5];
 
 # Load int the data file and create the list of all jobs.
-while(<$dat>){
+open(DAT, "<$filelist");
+while(<DAT>){
   chomp;
-  @a = split;
-  for ($t = 0; $t < $ARGV[1]; $t += 1){
-    push(@stack, "./ssmc $a[0] $a[3] $t $ARGV[3] $ARGV[4]");  #<--------- Here is where the list of command is created.
+  my @a = split;
+  my $file = $a[0];
+  my $optimal = $a[3];
+  my $besttime = $a[6];
+  for (my $t = 0; $t < $trials; $t += 1){
+    push(@stack, $command . " $file $optimal $t $weight $runtime");
   }
-  $opt{$a[0]} = $a[3];
-  $time{$a[0]} = $a[6];
+  $opt{$a[0]} = $optimal;
+  $time{$a[0]} = $besttime;
 }
+close(DAT);
 
 # Randomize the job order with Fisher-Yates.
 for (my $i = scalar(@stack)-1; $i>0; $i -= 1) {
@@ -23,8 +34,8 @@ for (my $i = scalar(@stack)-1; $i>0; $i -= 1) {
   @stack[$i, $r] = @stack[$r, $i] unless $r == $i;
 }
 
-open(LOG, ">$ARGV[2].log") || die "Could not open log file.\n";
-unlink "$ARGV[2].out";
+open(LOG, ">$tag.log") || die "Could not open log file.\n";
+unlink "$tag.out";
 
 # Run all the jobs.
 while ( scalar(@stack) > 0 ){
@@ -55,8 +66,8 @@ while ( scalar(@stack) > 0 ){
       }
     }
 
-    @a = split(/\s+/,$job);
-    open(OUT, ">>$ARGV[2].out") || die;
+    my @a = split(/\s+/,$job);
+    open(OUT, ">>$tag.out") || die;
     flock(OUT, 2) || die;
     print OUT "$a[1] $opt $time $loops\n";
     close(OUT);
@@ -70,15 +81,13 @@ while( scalar(keys %queue) > 0 ){
     print LOG $queue{$j}, "\n";
     delete $queue{$j};
 }
-
 close(LOG);
 
-open(IN,"<$ARGV[2].out");
-
 # Load up the output file and get the results.
+open(IN,"<$tag.out");
 while( <IN> ){
   chomp;
-  @a = split;
+  my @a = split;
   $count{$a[0]} += 1;
   $runtime{$a[0]} += $a[2];
   $loops{$a[0]} += $a[3];
@@ -89,19 +98,16 @@ while( <IN> ){
     }
   }
 }
-
 close(IN);
 
-open(REPORT,">$ARGV[2].txt");
-
 # Produce the final report.
+open(REPORT,">$tag.txt");
 for $file (sort keys %count){
   print REPORT "$file ";
   printf REPORT "%d/%d(%.0f%%) ",  $hit{$file}, $count{$file}, (100.0*$hit{$file})/$count{$file};
   printf REPORT "(%d/%d(%.0f%%)) ", $score{$file}, $count{$file}, (100.0*$score{$file})/$count{$file};
   printf REPORT "%.3fs loops=%.1f\n", $runtime{$file}/$count{$file}, $loops{$file}/$count{$file};
 }
-
 close(REPORT);
 
 __END__
