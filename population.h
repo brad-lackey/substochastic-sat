@@ -27,17 +27,18 @@ typedef struct population_st * Population;
 struct population_st {
   SAT sat;             ///< Reference to the underlying SAT problem.
   DSAT ds;             ///< Reference to the SAT derivative for updates.
+  Table tbl;
   int psize;           ///< The current population size.
   Bitstring *walker;   ///< Array of bitstrings that form the population.
   Bitstring winner;    ///< A copy of the best walker yet found.
   double avg_v;        ///< Average potential for the population.
-  int max_v;        ///< Maximum potential for the population.
-  int min_v;        ///< Minimum potential for the population.
+  int max_v;           ///< Maximum potential for the population.
+  int min_v;           ///< Minimum potential for the population.
 };
 
 // Memory management routines.
-int initPopulation(Population *Pptr, SAT sat);  ///< Create a population from its SAT instance.
-void freePopulation(Population *Pptr);          ///< Deallocation routine for a population.
-void randomPopulation(Population P, int size);  ///< Initialize a population of size \a size with random walkers.
+int initPopulation(Population *Pptr, SAT sat, int mode);  ///< Create a population from its SAT instance.
+void freePopulation(Population *Pptr);                    ///< Deallocation routine for a population.
+void randomPopulation(Population P, int size);            ///< Initialize a population of size \a size with random walkers.
 
 #endif /* population_h */

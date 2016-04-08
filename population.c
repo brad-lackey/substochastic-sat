@@ -11,16 +11,19 @@
 
 
 /**
- * This creates a population from the passed SAT instance, and computes and stores the derivative of that SAT instance too.
+ * This creates a population from the passed SAT instance.
+ * If the low bit of parameter \a mode is set, it also computes and stores the derivative of that SAT instance.
+ * If the next low bit of \a mode is set, it also computes a look table for fast evaluation, and stores it.
  * The amount of memory assigned to the population is an global integer \a arraysize.
  * Note the population size is dynamics, and so enough memory must be assigned.
  * WARNING: there are currently no checks to ensure the population does not die off entirely, or overflow the array!
  * However in the current implementation of the \a update routine, it is highly unlikely that the population size grows/shrinks by more that a few percent of its initial size.
  * @param Pptr points to the population to be created.
  * @param sat is the underlying SAT instance.
+ * @param mode indicated what additional structures to create.
  * @return Zero if successful, error code(s) if failed.
  */
-int initPopulation(Population *Pptr, SAT sat){
+int initPopulation(Population *Pptr, SAT sat, int mode){
   int i,err;
   Population P;
   
@@ -30,7 +33,16 @@ int initPopulation(Population *Pptr, SAT sat){
   }
   
   P->sat = sat;
-  createSATDerivative(&(P->ds),sat);
+  
+  if ( (mode & 1) )
+    P->ds = NULL;
+  else
+    createSATDerivative(&(P->ds),sat);
+  
+  if ( (mode & 2) )
+    P->tbl = NULL;
+  else
+    createIncidenceTable(&(P->tbl),sat);
   
   P->psize = 0;
 
@@ -117,7 +129,11 @@ void randomPopulation(Population P, int size){
 #endif
 
   randomBitstring(P->walker[0]);
-  e = getPotential(P->walker[0], P->sat);
+  if ( P->tbl != NULL )
+    e = getPotential2(P->walker[0],P->tbl);
+  else
+    e = getPotential(P->walker[0], P->sat);
+
   avg = e;
   min = e;
   argmin = 0;
@@ -139,7 +155,10 @@ void randomPopulation(Population P, int size){
 #endif
     
     randomBitstring(P->walker[i]);
-    e = getPotential(P->walker[i], P->sat);
+    if ( P->tbl != NULL )
+      e = getPotential2(P->walker[i],P->tbl);
+    else
+      e = getPotential(P->walker[i], P->sat);
     avg += e;
     if ( e < min ){
       min = e;

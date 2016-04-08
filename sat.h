@@ -12,8 +12,10 @@
 
 #include "macros.h"
 #include "bitstring.h"
+#include "gmp.h"
 
 int problem_type;
+int clen;           /// The length of clause strings (in words).
 
 /// The underlying type for a SAT instance.
 /**
@@ -58,5 +60,26 @@ struct diff_sat_st {
 // Constuctors and I/O routines.
 int createSATDerivative(DSAT *dsat_ptr, SAT sat);  ///< Creates and computes the derivative of the passed SAT instance.
 void freeSATDerivative(DSAT *dsat_ptr);            ///< Deallocation routine for a SAT derivative.
+
+struct incidence_table_st;
+typedef struct incidence_table_st * Table;
+
+struct incidence_table_st {
+  int num_words;
+  int num_bits;
+#if GMP
+  mpz_t *temp[1<<(8*CHUNK_SIZE)];
+  mpz_t buffer2;
+#else
+  word_t **incident[1<<(8*CHUNK_SIZE)];
+  word_t *buffer;
+#endif
+  int *weight;
+};
+
+int createIncidenceTable(Table *t_ptr, SAT sat);
+void freeIncidenceTable(Table *t_ptr);
+
+int getPotential2(Bitstring bts, Table tbl);
 
 #endif /* sat_h */

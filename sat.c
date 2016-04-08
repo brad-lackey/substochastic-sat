@@ -432,3 +432,157 @@ void freeSATDerivative(DSAT *dsat_ptr){
   }
 }
 
+
+
+
+
+
+int createIncidenceTable(Table *t_ptr, SAT sat){
+  int i,j,k,l;
+  Table tbl;
+  
+  if ( (tbl = (Table) malloc(sizeof(struct incidence_table_st))) == NULL ) {
+    *t_ptr = NULL;
+    return MEMORY_ERROR;
+  }
+  
+  tbl->num_words = (sat->num_vars+(8*CHUNK_SIZE)-1)/(8*CHUNK_SIZE);
+  tbl->num_bits = sat->num_clauses;
+  clen = (tbl->num_bits-1)/BITS_PER_WORD + 1;
+
+#if GMP
+  for (i=0; i<(1<<(8*CHUNK_SIZE)); ++i) {
+    if ( (tbl->temp[i] = (mpz_t *) malloc(tbl->num_words*sizeof(mpz_t))) == NULL ) {
+      freeIncidenceTable(&tbl);
+      *t_ptr = NULL;
+      return MEMORY_ERROR;
+    }
+    for (j=0; j<tbl->num_words; ++j)
+      mpz_init2(tbl->temp[i][j],sat->num_clauses);
+  }
+#else
+  for (i=0; i<(1<<(8*CHUNK_SIZE)); ++i) {
+    if ( (tbl->incident[i] = (word_t **) malloc(tbl->num_words*sizeof(word_t *))) == NULL ) {
+      freeIncidenceTable(&tbl);
+      *t_ptr = NULL;
+      return MEMORY_ERROR;
+    }
+    for (j=0; j<tbl->num_words; ++j){
+      if ( (tbl->incident[i][j] = (word_t *) calloc(clen,sizeof(word_t))) == NULL ) {
+        freeIncidenceTable(&tbl);
+        *t_ptr = NULL;
+        return MEMORY_ERROR;
+      }
+    }
+  }
+#endif
+  
+  if ( (tbl->weight = (int *) malloc(sat->num_clauses*sizeof(int))) == NULL ) {
+    freeIncidenceTable(&tbl);
+    *t_ptr = NULL;
+    return MEMORY_ERROR;
+  }
+  
+#if GMP
+  mpz_init2(tbl->buffer2,sat->num_clauses);
+#else
+  if ( (tbl->buffer = (word_t *) malloc(clen*sizeof(word_t))) == NULL ) {
+    freeIncidenceTable(&tbl);
+    *t_ptr = NULL;
+    return MEMORY_ERROR;
+  }
+#endif
+  
+  for (i=0; i<sat->num_clauses; ++i) {
+    for (j=0; j<sat->clause_length[i]; ++j) {
+      k = sat->clause[i][j];
+      if ( k > 0 ) {
+        for (l=0; l<(1<<(8*CHUNK_SIZE)); ++l)
+          if (  ((l>>((k-1)%(8*CHUNK_SIZE)))&1) == 1 ) {
+#if GMP
+            mpz_setbit(tbl->temp[l][(k-1)/(8*CHUNK_SIZE)],i);
+#else
+            tbl->incident[l][(k-1)/(8*CHUNK_SIZE)][i/BITS_PER_WORD] |= ((word_t) 1) << (i%BITS_PER_WORD);
+#endif
+          }
+      } else {
+        for (l=0; l<(1<<(8*CHUNK_SIZE)); ++l)
+          if (  ((l>>((-k-1)%(8*CHUNK_SIZE)))&1) == 0 ) {
+#if GMP
+            mpz_setbit(tbl->temp[l][(-k-1)/(8*CHUNK_SIZE)],i);
+#else
+            tbl->incident[l][(-k-1)/(8*CHUNK_SIZE)][i/BITS_PER_WORD] |= ((word_t) 1) << (i%BITS_PER_WORD);
+#endif
+          }
+      }
+    }
+    tbl->weight[i] = sat->clause_weight[i];
+  }
+  
+  *t_ptr = tbl;
+  return 0;
+}
+
+void freeIncidenceTable(Table *t_ptr){
+  int j,k;
+  if ( (*t_ptr) != NULL ) {
+    for (j=0; j<(1<<(8*CHUNK_SIZE)); ++j) {
+#if GMP
+      if ( (*t_ptr)->temp[j] != NULL ){
+        for (k=0; k<(*t_ptr)->num_words; ++k)
+          mpz_clear((*t_ptr)->temp[j][k]);
+        free((*t_ptr)->temp[j]);
+      }
+#else
+      if ( (*t_ptr)->incident[j] != NULL ){
+        for (k=0; k<(*t_ptr)->num_words; ++k){
+          if ( (*t_ptr)->incident[j][k] != NULL)
+            free((*t_ptr)->incident[j][k]);
+        }
+        free((*t_ptr)->incident[j]);
+      }
+#endif
+    }
+#if GMP
+    mpz_clear((*t_ptr)->buffer2);
+#else
+    if ( (*t_ptr)->buffer != NULL )
+      free((*t_ptr)->buffer);
+#endif
+    free(*t_ptr);
+  }
+  (*t_ptr) = NULL;
+}
+
+int getPotential2(Bitstring bts, Table tbl){
+  int i,j,k;
+
+#if GMP
+  mpz_set_ui(tbl->buffer2,0);
+#else
+  for (j=0; j<clen; ++j)
+    tbl->buffer[j] = 0;
+#endif
+
+  for (i=0; i<tbl->num_words; ++i) {
+    k = (bts->node[i/BYTES_PER_WORD] >> (8*(i%BYTES_PER_WORD))) & ((1<<(8*CHUNK_SIZE))-1);
+#if GMP
+    mpz_ior(tbl->buffer2,tbl->temp[k][i],tbl->buffer2);
+#else
+    for (j=0; j<clen; ++j)
+      tbl->buffer[j] |= tbl->incident[k][i][j];
+#endif
+  }
+  
+  for (i=j=0; i<tbl->num_bits; ++i){
+#if GMP
+    if ( mpz_tstbit(tbl->buffer2,i) == 0 )
+      j += tbl->weight[i];
+#else
+    if ( ((tbl->buffer[i/BITS_PER_WORD] >> (i%BITS_PER_WORD)) & 1) == 0 )
+      j += tbl->weight[i];
+#endif
+  }
+  return j;
+}
+

@@ -24,9 +24,11 @@ extern int nbts;
 extern int arraysize;
 extern int problem_type;
 
-static int popsize;
+static int popsize,runmode;
 static double weight, runtime, runstep;
 static int optimal;
+
+
 
 
 void update(double a, double b, double mean, Population P, int parity);
@@ -172,7 +174,7 @@ int parseCommand(int argc, char **argv, Population *Pptr){
       runtime = 10000.0;
       runstep = 0.0;
       popsize = 16;
-      
+      runmode = 0;
     }
     
     if ( (problem_type == UNWEIGHTED_2_SAT) || (problem_type == WEIGHTED_2_SAT) ){
@@ -180,6 +182,7 @@ int parseCommand(int argc, char **argv, Population *Pptr){
       runtime = exp(0.041*sat->num_vars + 3.5)/weight;
       runstep = exp(0.025*sat->num_vars + 2.5)/weight;
       popsize = 16;
+      runmode = 1;
     }
     
     if ( (problem_type == UNWEIGHTED_3_SAT) || (problem_type == WEIGHTED_3_SAT) ) {
@@ -187,7 +190,17 @@ int parseCommand(int argc, char **argv, Population *Pptr){
       runtime = exp(0.010*sat->num_vars + 8.9)/weight;
       runstep = exp(0.010*sat->num_vars + 5.8)/weight;
       popsize = 16;
+      runmode = 1;
     }
+    
+    if ( problem_type == UNWEIGHTED_4_SAT ) {
+      weight = 0.50;
+      runtime = 1000000.0;
+      runstep = 0.0;
+      popsize = 16;
+      runmode = 1;
+    }
+    
     
     if ( argc >= 3 ) {
       
@@ -216,6 +229,7 @@ int parseCommand(int argc, char **argv, Population *Pptr){
     weight /= 100.0;
     runstep = 0.0;
     popsize = 16;
+    runmode = 1;
     
   }
   
@@ -227,13 +241,13 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   
   arraysize = 10*popsize;
   
-  if ( initPopulation(&pop, sat) ) {
+  srand48(seed);
+  printf("c Seed: %i\n", seed);
+
+  if ( initPopulation(&pop, sat, runmode) ) {
     fprintf(stderr,"Could not initialize potential.\n");
     return MEMORY_ERROR;
   }
-  
-  srand48(seed);
-  printf("c Seed: %i\n", seed);
   
   *Pptr = pop;
   
@@ -259,7 +273,15 @@ void update(double a, double b, double mean, Population P, int parity){
     // First potential event: walker steps.
     if ( p < a ) {
       k = randomBitFlip(P->walker[new+j], P->walker[old+i]);
-      e = P->walker[old+i]->potential + ((k>0)-(k<0))*getPotential(P->walker[new+j],P->ds->der[abs(k)-1]);
+      if ( P->ds != NULL )
+        e = P->walker[old+i]->potential + ((k>0)-(k<0))*getPotential(P->walker[new+j],P->ds->der[abs(k)-1]);
+      else {
+        if ( P->tbl != NULL )
+          e = getPotential2(P->walker[new+j],P->tbl);
+        else
+          e = getPotential(P->walker[new+j],P->sat);
+      }
+
       P->walker[new+j]->potential = e;
       if ( e < min ){
         min = e;
