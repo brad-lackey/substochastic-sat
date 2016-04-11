@@ -102,12 +102,23 @@ close(IN);
 
 # Produce the final report.
 open(REPORT,">$tag.txt");
+$count = 0;
+$hit = 0;
+$score = 0;
+$runtime = 0.0;
 for $file (sort keys %count){
+	$count += $count{$file};
   print REPORT "$file ";
+	$hit += $hit{$file};
   printf REPORT "%d/%d(%.0f%%) ",  $hit{$file}, $count{$file}, (100.0*$hit{$file})/$count{$file};
+	$score += $score{$file};
   printf REPORT "(%d/%d(%.0f%%)) ", $score{$file}, $count{$file}, (100.0*$score{$file})/$count{$file};
+	$runtime += $runtime{$file};
   printf REPORT "%.3fs loops=%.1f\n", $runtime{$file}/$count{$file}, $loops{$file}/$count{$file};
 }
+printf REPORT "Overall: %d/%d(%.0f%%) ", $hit, $count,  (100.0*$hit)/$count;
+printf REPORT "(%d/%d(%.0f%%)) ", $score, $count, (100.0*$score)/$count;
+printf REPORT "%.3fs\n", $runtime/$count;
 close(REPORT);
 
 __END__

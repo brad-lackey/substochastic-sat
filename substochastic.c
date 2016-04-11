@@ -105,7 +105,7 @@ int main(int argc, char **argv){
         break;
       }
     }
-    if ( time_spent > 60 )
+    if ( time_spent > 240 )
       break;
     
 #if TRACK_GLOBAL_BIASES
@@ -171,10 +171,10 @@ int parseCommand(int argc, char **argv, Population *Pptr){
     
     if ( (problem_type == UNKNOWN) || (problem_type == UNWEIGHTED_4_SAT) ) {
       weight = 0.50;
-      runtime = 10000.0;
+      runtime = 1000000.0;
       runstep = 0.0;
       popsize = 16;
-      runmode = 0;
+      runmode = 2;
     }
     
     if ( (problem_type == UNWEIGHTED_2_SAT) || (problem_type == WEIGHTED_2_SAT) ){
@@ -186,19 +186,19 @@ int parseCommand(int argc, char **argv, Population *Pptr){
     }
     
     if ( (problem_type == UNWEIGHTED_3_SAT) || (problem_type == WEIGHTED_3_SAT) ) {
-      weight = 0.16;
-      runtime = exp(0.010*sat->num_vars + 8.9)/weight;
-      runstep = exp(0.010*sat->num_vars + 5.8)/weight;
+      weight = 0.14;
+      runtime = exp(0.030*sat->num_vars + 6.1);
+      runstep = exp(0.024*sat->num_vars + 4.5);
       popsize = 16;
-      runmode = 1;
+      runmode = 2;
     }
     
     if ( problem_type == UNWEIGHTED_4_SAT ) {
-      weight = 0.50;
-      runtime = 1000000.0;
-      runstep = 0.0;
+      weight = 0.09;
+      runtime = exp(0.022*sat->num_vars + 10.0);
+      runstep = exp(0.022*sat->num_vars + 8.3);
       popsize = 16;
-      runmode = 1;
+      runmode = 2;
     }
     
     
