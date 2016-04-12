@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-$queue_size = 6;
+$queue_size = 10;
 
 (scalar(@ARGV) == 4) or (scalar(@ARGV) == 6) or die "Usage: ./testrun.pl command <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n";
 

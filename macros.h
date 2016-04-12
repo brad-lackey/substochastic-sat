@@ -15,17 +15,28 @@
 
 typedef unsigned long word_t;
 
-#define CHUNK_SIZE 1           ///< Number of bytes used in lookup table.
+#define VARIABLE_WORD_SIZE 1   ///< Number of bytes per word in generating bitstring lookup table.
 
-#define BYTES_PER_WORD sizeof(word_t)
-#define BITS_PER_WORD (8*sizeof(word_t))
+#define CLAUSE_LIMB_BITS 64
+#define CLAUSE_NUMB_BITS 64
+#define CLAUSE_WORD_BITS 16
+#define NUM_CLAUSE_WORDS (1<<CLAUSE_WORD_BITS)
+
+#define VARIABLE_LIMB_BITS 64
+#define VARIABLE_NUMB_BITS 60
+#define VARIABLE_WORD_BITS 12
+#define NUM_VARIABLE_WORDS (1<<VARIABLE_WORD_BITS)
+
+
+//#define BYTES_PER_WORD sizeof(word_t)
+//#define BITS_PER_WORD (8*sizeof(word_t))
 
 #define TRACK_GLOBAL_BIASES 1   ///< Turn on/off biasing of individual bits based on problem structure/previous solutions.
 
 #if TRACK_GLOBAL_BIASES
-#define INITIAL_BUILD_RELAXATION 0.9   ///< Relaxation on the initial distribution based on examining the SAT instance.
-#define UPDATE_RELAXATION        0.9   ///< Relaxation on the update distribution given by the previous winner(s).
-#define REMIX_PERCENTAGE         0.95  ///< What percentage of the previous distribution is kept in the next step.
+#define INITIAL_BUILD_RELAXATION 0.95  ///< Relaxation on the initial distribution based on examining the SAT instance.
+#define UPDATE_RELAXATION        0.95  ///< Relaxation on the update distribution given by the previous winner(s).
+#define REMIX_PERCENTAGE         0.60  ///< What percentage of the previous distribution is kept in the next step.
 #endif
 
 // Problem types.
@@ -37,6 +48,7 @@ typedef unsigned long word_t;
 
 #define WEIGHTED_2_SAT 30
 #define WEIGHTED_3_SAT 31
+#define WEIGHTED_4_SAT 32
 
 
 #endif

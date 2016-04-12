@@ -35,15 +35,16 @@ int initPopulation(Population *Pptr, SAT sat, int mode){
   P->sat = sat;
   
   if ( (mode & 1) )
-    P->ds = NULL;
-  else
     createSATDerivative(&(P->ds),sat);
-  
-  if ( (mode & 2) )
-    P->tbl = NULL;
   else
-    createIncidenceTable(&(P->tbl),sat);
+    P->ds = NULL;
   
+  if ( (mode & 2) ){
+    createIncidenceTable(&(P->tbl),sat);
+  }
+  else
+    P->tbl = NULL;
+
   P->psize = 0;
 
   if ( (P->walker = (Bitstring *) malloc((2*arraysize)*sizeof(Bitstring))) == NULL ){
@@ -122,13 +123,12 @@ void randomPopulation(Population P, int size){
   }
   for (j=0; j<nbts; ++j) {
     u = (word_t) (drand48() > P->sat->global_bias[j]);
-    P->walker[0]->node[j/BITS_PER_WORD] ^= u << (j % BITS_PER_WORD);
+    P->walker[0]->node[j/VARIABLE_NUMB_BITS] ^= u << (j % VARIABLE_NUMB_BITS);
   }
 #else
   randomBitstring(P->walker[0]);
 #endif
 
-  randomBitstring(P->walker[0]);
   if ( P->tbl != NULL )
     e = getPotential2(P->walker[0],P->tbl);
   else
@@ -148,13 +148,12 @@ void randomPopulation(Population P, int size){
     }
     for (j=0; j<nbts; ++j) {
       u = (word_t) (drand48() > P->sat->global_bias[j]);
-      P->walker[i]->node[j/BITS_PER_WORD] ^= u << (j % BITS_PER_WORD);
+      P->walker[i]->node[j/VARIABLE_NUMB_BITS] ^= u << (j % VARIABLE_NUMB_BITS);
     }
 #else
     randomBitstring(P->walker[i]);
 #endif
     
-    randomBitstring(P->walker[i]);
     if ( P->tbl != NULL )
       e = getPotential2(P->walker[i],P->tbl);
     else

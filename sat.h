@@ -12,10 +12,15 @@
 
 #include "macros.h"
 #include "bitstring.h"
+
+#if GMP
 #include "gmp.h"
+#endif
 
 int problem_type;
 int clen;           /// The length of clause strings (in words).
+int tlen;           /// The length of clause strings (in numbs).
+int vlen;           /// The length of variable strings (in words).
 
 /// The underlying type for a SAT instance.
 /**
@@ -65,16 +70,16 @@ struct incidence_table_st;
 typedef struct incidence_table_st * Table;
 
 struct incidence_table_st {
+#if GMP
   int num_words;
   int num_bits;
-#if GMP
-  mpz_t *temp[1<<(8*CHUNK_SIZE)];
+  mpz_t *temp[1<<(8*VARIABLE_WORD_SIZE)];
   mpz_t buffer2;
 #else
-  word_t **incident[1<<(8*CHUNK_SIZE)];
+  word_t **incident[NUM_VARIABLE_WORDS];
   word_t *buffer;
 #endif
-  int *weight;
+  int *weight[NUM_CLAUSE_WORDS];
 };
 
 int createIncidenceTable(Table *t_ptr, SAT sat);
