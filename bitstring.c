@@ -19,7 +19,7 @@ int setBitLength(int num_bits){
   }
   
   nbts = num_bits;
-  blen = (num_bits-1)/BITS_PER_WORD + 1;
+  blen = (num_bits-1)/VARIABLE_NUMB_BITS + 1;
   return 0;
 }
 
@@ -38,7 +38,7 @@ void printBits(FILE *fp, Bitstring bst) {
   fprintf(fp,"v ");
   
   for(i = 0; i < nbts; i++) {
-    val = bst->node[i/BITS_PER_WORD] >> (i % BITS_PER_WORD);
+    val = bst->node[i/VARIABLE_NUMB_BITS] >> (i % VARIABLE_NUMB_BITS);
     if(val%2) fprintf(fp,"%i ", i+1);
     else fprintf(fp,"%i ", -(i+1));
   }
@@ -61,7 +61,7 @@ int initBitstring(Bitstring *bst_ptr){
   }
   
   // Create an array for storing the bits, or return failure.
-  if ( (bst->node = (word_t *) calloc(blen,sizeof(word_t))) == NULL ) {
+  if ( (bst->node = (word_t *) malloc(blen*sizeof(word_t))) == NULL ) {
     free(bst);
     return MEMORY_ERROR;
   }
@@ -95,19 +95,15 @@ void freeBitstring(Bitstring *bst_ptr){
  * @return Zero.
  */
 int randomBitstring(Bitstring bst){
-  int i, j;
-  int s = (BYTES_PER_WORD-1)/4 + 1;
+  int i;
   
   for (i=0; i<blen; ++i) {
     
-    // Zero out the i-th word of the bitstring.
-    bst->node[i] = 0ull;
-    
     // Load up the i-th word of the bitstring with random bits.
     // Recall that lrand48() returns 32 bits (4 bytes) worth of random.
-    for (j=0; j<s; ++j) {
-      bst->node[i] |= ((word_t) lrand48()) << (32*j);
-    }
+    bst->node[i] = (word_t) lrand48();
+    bst->node[i] ^= ((word_t) lrand48()) << 32;
+//    bst->node[i] &= (1ul<<VARIABLE_NUMB_BITS)-1;
   }
   
   return 0;
@@ -151,10 +147,10 @@ int randomBitFlip(Bitstring bst_out, Bitstring bst_in){
   i = lrand48() % nbts;
   
   // Find the value of the bit.
-  j = (bst_out->node[i/BITS_PER_WORD] >> (i % BITS_PER_WORD)) & 1;
+  j = (bst_out->node[i/VARIABLE_NUMB_BITS] >> (i % VARIABLE_NUMB_BITS)) & 1;
   
   // Flip that bit.
-  bst_out->node[i/BITS_PER_WORD] ^= ((word_t) 1) << (i % BITS_PER_WORD);
+  bst_out->node[i/VARIABLE_NUMB_BITS] ^= ((word_t) 1) << (i % VARIABLE_NUMB_BITS);
   
   // Return the bit that was flipped.
   return (1-2*((int) j))*(i+1);

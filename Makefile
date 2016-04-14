@@ -1,9 +1,10 @@
 CC=gcc
 #CFLAGS=-O3 -fvectorize -funroll-loops
 CFLAGS=-O3 -funroll-loops -Wall
-INC=-I/opt/local/include
-LIB=-L/opt/local/lib
-LINK=-lm -lgmp
+LINK=-lm
+#INC=-I/opt/local/include
+#LIB=-L/opt/local/lib
+#LINK=-lm -lgmp
 
 all : substochastic verify process
 

@@ -19,13 +19,13 @@
 //declaration of getline() and round().
 #define _GNU_SOURCE
 
-extern int blen;
+extern int blen,clen,tlen,vlen;
 extern int nbts;
 extern int arraysize;
 extern int problem_type;
 
 static int popsize,runmode;
-static double weight, runtime, runstep;
+static double weight, end_weight, runtime, runstep;
 static int optimal;
 
 
@@ -57,23 +57,35 @@ int main(int argc, char **argv){
     return err;
   }
   
+  end = clock();
+  time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
+  printf("c Problem loaded: %f seconds\n", time_spent);
+  
+  
   if ( (err = initBitstring(&solution)) ){
     fprintf(stderr, "Could not initialize answerspace.\n");
     return err;
   }
   
   
+  randomPopulation(pop,popsize);
+  end = clock();
+  time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
+  printBits(stdout, pop->winner);
+  printf("c Walltime: %f seconds, 0 loops\n", time_spent);
+  fflush(stdout);
+  min = pop->winner->potential;
+  
   try = 1;
   while (1) {
     
     t = 0.0;
     parity = 0;
-    randomPopulation(pop,popsize);
     
     while (t < runtime) {
       
       // The annealing schedule
-      a = weight*(1.0 - t/runtime); // Turned weight into percent -- Michael 3/30/16
+      a = weight*(1.0 - t/runtime);
       b = (t/runtime);
       
       mean = pop->avg_v + (pop->max_v - pop->min_v)*(popsize - pop->psize)/(2.0*popsize);
@@ -95,35 +107,59 @@ int main(int argc, char **argv){
     end = clock();
     time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
     
-    if ((min<0) || (pop->winner->potential < min)) {
+    if ( pop->winner->potential < min ) {
       printBits(stdout, pop->winner);
       printf("c Walltime: %f seconds, %d loops\n", time_spent, try);
       fflush(stdout);
       min = pop->winner->potential;
       copyBitstring(solution, pop->winner);
-      if (min == optimal) {
+      if (min <= optimal) {
         break;
       }
     }
-    if ( time_spent > 240 )
+    
+    if ( time_spent > 270 )
       break;
     
+    if ( time_spent > 120 ){
+      
+      weight = 0.01;
+      runtime = 8000000.0;
+      
 #if TRACK_GLOBAL_BIASES
-    
-    for (i=0; i<pop->sat->num_vars; ++i) {
-      pop->sat->global_bias[i] *= REMIX_PERCENTAGE;
-      u = pop->winner->node[i/BITS_PER_WORD] >> (i % BITS_PER_WORD);
-      pop->sat->global_bias[i] += (1-REMIX_PERCENTAGE)*(UPDATE_RELAXATION - (2*UPDATE_RELAXATION -1)*(u%2));
+      
+      for (i=0; i<pop->sat->num_vars; ++i) {
+        pop->sat->global_bias[i] *= REMIX_PERCENTAGE;
+        u = pop->winner->node[i/VARIABLE_NUMB_BITS] >> (i % VARIABLE_NUMB_BITS);
+        pop->sat->global_bias[i] += (1-REMIX_PERCENTAGE)*(UPDATE_RELAXATION - (2*UPDATE_RELAXATION -1)*(u%2));
+      }
+      
+#endif
+
+    } else {
+      
+      weight = 0.95*weight + 0.05*end_weight;
+      runtime += runstep;
+      
+#if TRACK_GLOBAL_BIASES
+      
+      for (i=0; i<pop->sat->num_vars; ++i) {
+        pop->sat->global_bias[i] *= REMIX_PERCENTAGE;
+        u = pop->winner->node[i/VARIABLE_NUMB_BITS] >> (i % VARIABLE_NUMB_BITS);
+        pop->sat->global_bias[i] += (1-REMIX_PERCENTAGE)*(UPDATE_RELAXATION - (2*UPDATE_RELAXATION -1)*(u%2));
+      }
+      
+#endif
+      
     }
     
-#endif
+    ++try;
     
-    runtime += runstep;
-    try += 1;
+    randomPopulation(pop,popsize);
   }
   
   freeBitstring(&solution);
-
+  
   return 0;
 }
 
@@ -134,18 +170,17 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   FILE *fp;
   Population pop;
   
-  if ( argc != 2 && argc != 3 && argc != 4 && argc != 6 ) {
-    fprintf(stderr, "Usage: %s <instance.cnf> \n",argv[0]);
-    fprintf(stderr, "Usage: %s <instance.cnf> <optimum>\n",argv[0]);
-    fprintf(stderr, "Usage: %s <instance.cnf> <optimum> <seed>\n",argv[0]);
-    fprintf(stderr, "Usage: %s <instance.cnf> <optimum> <seed> <step weight> <runtime>\n",argv[0]);
+  if ( (argc < 2) || (argc > 4) ) {
+    fprintf(stderr, "Usage: %s <instance.cnf> [<target optimum> [<seed>]]\n",argv[0]);
     return 2;
   }
   
-  printf("c ------------------------------------------------------\n");
-  printf("c Substochastic Monte Carlo, version 1.0                \n");
-  printf("c Brad Lackey, Stephen Jordan, and Michael Jarret, 2016.\n");
-  printf("c ------------------------------------------------------\n");
+  printf("c ----------------------------------------------------------\n");
+  printf("c Substochastic Monte Carlo, version 1.0, 2016              \n");
+  printf("c Michael Jarret, Stephen Jordan, and Brad Lackey           \n");
+  printf("c Joint Center for Quantum Information and Computer Science \n");
+  printf("c University of Maryland, College Park.                     \n");
+  printf("c ----------------------------------------------------------\n");
   printf("c Input: %s\n", argv[1]);
   
   if ( (fp = fopen(argv[1], "r")) == NULL ){
@@ -160,90 +195,151 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   
   fclose(fp);
   
+  
   setBitLength(sat->num_vars);
+  clen = (sat->num_clauses-1)/CLAUSE_WORD_BITS + 1;
+  tlen =(sat->num_clauses-1)/CLAUSE_NUMB_BITS + 1;
+  vlen = (sat->num_vars-1)/VARIABLE_WORD_BITS + 1;
   
   printf("c Bits: %d\n", nbts);
   printf("c Clauses (after tautology removal): %d\n", sat->num_clauses);
   printf("c Problem type: %d\n", problem_type);
-
-  if ( argc <= 4 ) {
-    
-    
-    if ( (problem_type == UNKNOWN) || (problem_type == UNWEIGHTED_4_SAT) ) {
-      weight = 0.50;
-      runtime = 1000000.0;
-      runstep = 0.0;
-      popsize = 16;
-      runmode = 2;
-    }
-    
-    if ( (problem_type == UNWEIGHTED_2_SAT) || (problem_type == WEIGHTED_2_SAT) ){
-      weight = 0.18;
-      runtime = exp(0.041*sat->num_vars + 3.5)/weight;
-      runstep = exp(0.025*sat->num_vars + 2.5)/weight;
-      popsize = 16;
-      runmode = 1;
-    }
-    
-    if ( (problem_type == UNWEIGHTED_3_SAT) || (problem_type == WEIGHTED_3_SAT) ) {
-      weight = 0.14;
-      runtime = exp(0.030*sat->num_vars + 6.1);
-      runstep = exp(0.024*sat->num_vars + 4.5);
-      popsize = 16;
-      runmode = 2;
-    }
-    
-    if ( problem_type == UNWEIGHTED_4_SAT ) {
-      weight = 0.09;
-      runtime = exp(0.022*sat->num_vars + 10.0);
-      runstep = exp(0.022*sat->num_vars + 8.3);
-      popsize = 16;
-      runmode = 2;
-    }
-    
-    
-    if ( argc >= 3 ) {
-      
-      optimal = atoi(argv[2]);
-      
-      if ( argc == 4 ) {
-        seed = atoi(argv[3]);
-      } else {
-        seed = time(0);
-      }
-      
-      
-    } else {
-      
-      optimal = 0;
-      seed = time(0);
-      
-    }
-    
-  } else { // This is the timing trials case.
-    
-    optimal = atoi(argv[2]);
-    seed = atoi(argv[3]);
-    sscanf(argv[4], "%lf", &weight);
-    sscanf(argv[5], "%lf", &runtime);
-    weight /= 100.0;
-    runstep = 0.0;
+  
+  
+  if ( problem_type == UNKNOWN ) {
+    weight = sat->total_weight/2500.0;
+    end_weight = 0.01;
+    runtime = sat->num_vars*sat->num_vars;
+    runstep = runtime/2.0;
     popsize = 16;
-    runmode = 2;
+    if ( NUM_VARIABLE_WORDS*vlen*tlen*sizeof(word_t) + NUM_CLAUSE_WORDS*clen*sizeof(int) < (1<<30) )
+      runmode = 2;
+    else
+      runmode = 1;
+  }
+  
+  if ( problem_type == UNWEIGHTED_2_SAT ){
+    
+    // Parameters finalized: 13 April 2016 (bclackey)
+    weight = sat->total_weight/5000.0;
+    end_weight = sat->total_weight/5500.0;
+    runtime = exp(0.022*sat->num_vars + 5.9);
+    runstep = exp(0.022*sat->num_vars + 4.6);
+    popsize = 16;
+    runmode = 1;
     
   }
   
-  printf("c Population size: %d\n", popsize);
-  printf("c Starting runtime: %.0f\n", runtime);
-  printf("c Runtime step per loop: %.0f\n", runstep);
-  printf("c Step weight: %.3f\n", weight);
-  printf("c Target potential: %d\n", optimal);
+  if (  problem_type == PARTIAL_2_SAT ){
+    
+    // Parameters last modified: 13 April 2016 (bclackey)
+    weight = sat->total_weight/60000.0;
+    end_weight = sat->total_weight/100000.0;
+    runtime = exp(0.018*sat->num_vars + 3.7);
+    runstep = exp(0.012*sat->num_vars + 4.3);
+    popsize = 16;
+    runmode = 1;
+    
+  }
   
-  arraysize = 10*popsize;
+  if ( problem_type == WEIGHTED_2_SAT ){
+    
+    // Parameters finalized: 13 April 2016 (bclackey)
+    weight = sat->total_weight/5000.0;
+    end_weight = sat->total_weight/5500.0;
+    runtime = exp(0.022*sat->num_vars + 5.9);
+    runstep = exp(0.022*sat->num_vars + 4.6);
+    popsize = 16;
+    runmode = 1;
+    
+  }
+  
+  if ( problem_type == UNWEIGHTED_3_SAT ) {
+    
+    // Parameters last modified: 13 April 2016 (bclackey)
+    weight = sat->total_weight/5000.0;
+    end_weight = sat->total_weight/10000.0;
+    runtime = exp(0.035*sat->num_vars + 6.1);
+    runstep = exp(0.030*sat->num_vars + 4.4);
+    popsize = 16;
+    runmode = 1;
+    
+  }
+  
+  if ( problem_type == PARTIAL_3_SAT ) {
+    
+    // Parameters last modified: 13 April 2016 (bclackey)
+    weight = sat->total_weight/16000.0;
+    end_weight = sat->total_weight/200000.0;
+    runtime = exp(0.031*sat->num_vars + 4.4);
+    runstep = exp(0.025*sat->num_vars + 3.9);
+    popsize = 16;
+    runmode = 1;
+    
+  }
+  
+  if ( problem_type == WEIGHTED_3_SAT ){
+    
+    // Parameters finalized: 13 April 2016 (bclackey)
+    weight = sat->total_weight/5000.0;
+    end_weight = sat->total_weight/10000.0;
+    runtime = exp(0.028*sat->num_vars + 6.2);
+    runstep = exp(0.028*sat->num_vars + 4.5);
+    popsize = 16;
+    runmode = 1;
+    
+  }
+  
+  if ( (problem_type == UNWEIGHTED_4_SAT) || (problem_type == WEIGHTED_4_SAT) ) {
+    
+    // Parameters last modified: 13 April 2016 (bclackey)
+    weight = sat->total_weight/8000.0;
+    end_weight = 0.001;
+    runtime = exp(0.032*sat->num_vars + 9.3);
+    runstep = exp(0.036*sat->num_vars + 7.9);
+    popsize = 16;
+    runmode = 2;
+  }
+  
+  
+  if ( argc >= 3 ) {
+    
+    optimal = atoi(argv[2]);
+    
+    if ( argc == 4 ) {
+      seed = atoi(argv[3]);
+    } else {
+      seed = time(0);
+    }
+    
+    
+  } else {
+    
+    optimal = 0;
+    seed = time(0);
+    
+  }
+  
+  
+  // Break out of attempt to put way too large a problem into the system.
+  if ( runtime > 8000000 ) {
+    runtime = 8000000;
+    runstep = 0;
+    weight = 0.1;
+    end_weight = 0.01;
+  }
+  
+  //  printf("c Population size: %d\n", popsize);
+  //  printf("c Starting runtime: %.0f\n", runtime);
+  //  printf("c Runtime step per loop: %.0f\n", runstep);
+  //  printf("c Step weight: %.3f\n", weight);
+  //  printf("c Target potential: %d\n", optimal);
+  
+  arraysize = 2000;
   
   srand48(seed);
   printf("c Seed: %i\n", seed);
-
+  
   if ( initPopulation(&pop, sat, runmode) ) {
     fprintf(stderr,"Could not initialize potential.\n");
     return MEMORY_ERROR;
@@ -256,8 +352,6 @@ int parseCommand(int argc, char **argv, Population *Pptr){
 
 
 
-
-
 void update(double a, double b, double mean, Population P, int parity){
   int i,j,k;
   double p,e;
@@ -267,7 +361,7 @@ void update(double a, double b, double mean, Population P, int parity){
   int old = parity*arraysize;
   int new = (1-parity)*arraysize;
   
-  for (i=j=0; i<P->psize; ++i) {   // Loop over each walker (i) and set target position (j) to zero.
+  for (i=j=0; (i<P->psize) && (j<arraysize); ++i) {   // Loop over each walker (i) and set target position (j) to zero.
     p = drand48();
     
     // First potential event: walker steps.
@@ -281,7 +375,7 @@ void update(double a, double b, double mean, Population P, int parity){
         else
           e = getPotential(P->walker[new+j],P->sat);
       }
-
+      
       P->walker[new+j]->potential = e;
       if ( e < min ){
         min = e;
