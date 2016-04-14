@@ -19,13 +19,13 @@
 //declaration of getline() and round().
 #define _GNU_SOURCE
 
-extern int blen,clen,tlen,vlen;
+extern int blen;
 extern int nbts;
 extern int arraysize;
 extern int problem_type;
 
 static int popsize,runmode;
-static double weight, end_weight, runtime, runstep;
+static double weight, runtime, runstep;
 static int optimal;
 
 
@@ -60,13 +60,7 @@ int main(int argc, char **argv){
   end = clock();
   time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
   printf("c Problem loaded: %f seconds\n", time_spent);
-  
-  
-  end = clock();
-  time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
-  printf("c Problem loaded: %f seconds\n", time_spent);
-  
-  
+
   if ( (err = initBitstring(&solution)) ){
     fprintf(stderr, "Could not initialize answerspace.\n");
     return err;
@@ -87,11 +81,12 @@ int main(int argc, char **argv){
     
     t = 0.0;
     parity = 0;
+    randomPopulation(pop,popsize);
     
     while (t < runtime) {
       
       // The annealing schedule
-      a = weight*(1.0 - t/runtime);
+      a = weight*(1.0 - t/runtime); // Turned weight into percent -- Michael 3/30/16
       b = (t/runtime);
       
       mean = pop->avg_v + (pop->max_v - pop->min_v)*(popsize - pop->psize)/(2.0*popsize);
@@ -113,17 +108,16 @@ int main(int argc, char **argv){
     end = clock();
     time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
     
-    if ( pop->winner->potential < min ) {
+    if ((min<0) || (pop->winner->potential < min)) {
       printBits(stdout, pop->winner);
       printf("c Walltime: %f seconds, %d loops\n", time_spent, try);
       fflush(stdout);
       min = pop->winner->potential;
       copyBitstring(solution, pop->winner);
-      if (min <= optimal) {
+      if (min == optimal) {
         break;
       }
     }
-    
     if ( time_spent > 270 )
       break;
     
@@ -139,6 +133,7 @@ int main(int argc, char **argv){
       
     }
     
+
 #if TRACK_GLOBAL_BIASES
     
     for (i=0; i<pop->sat->num_vars; ++i) {
@@ -154,7 +149,7 @@ int main(int argc, char **argv){
   }
   
   freeBitstring(&solution);
-  
+
   return 0;
 }
 
@@ -165,17 +160,16 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   FILE *fp;
   Population pop;
   
-  if ( (argc < 2) || (argc > 4) ) {
+  if ( argc < 2 || argc > 4 ) {
+    fprintf(stderr, "Usage: %s <instance.cnf> \n",argv[0]);
     fprintf(stderr, "Usage: %s <instance.cnf> [<target optimum> [<seed>]]\n",argv[0]);
     return 2;
   }
   
-  printf("c ----------------------------------------------------------\n");
-  printf("c Substochastic Monte Carlo, version 1.0, 2016              \n");
-  printf("c Michael Jarret, Stephen Jordan, and Brad Lackey           \n");
-  printf("c Joint Center for Quantum Information and Computer Science \n");
-  printf("c University of Maryland, College Park.                     \n");
-  printf("c ----------------------------------------------------------\n");
+  printf("c ------------------------------------------------------\n");
+  printf("c Substochastic Monte Carlo, version 1.0                \n");
+  printf("c Brad Lackey, Stephen Jordan, and Michael Jarret, 2016.\n");
+  printf("c ------------------------------------------------------\n");
   printf("c Input: %s\n", argv[1]);
   
   if ( (fp = fopen(argv[1], "r")) == NULL ){
@@ -190,16 +184,11 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   
   fclose(fp);
   
-  
   setBitLength(sat->num_vars);
-  clen = (sat->num_clauses-1)/CLAUSE_WORD_BITS + 1;
-  tlen =(sat->num_clauses-1)/CLAUSE_NUMB_BITS + 1;
-  vlen = (sat->num_vars-1)/VARIABLE_WORD_BITS + 1;
   
   printf("c Bits: %d\n", nbts);
   printf("c Clauses (after tautology removal): %d\n", sat->num_clauses);
   printf("c Problem type: %d\n", problem_type);
-  
   
   if ( problem_type == UNKNOWN ) {
     weight = sat->total_weight/5000.0;
@@ -300,20 +289,23 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   
   if ( argc >= 3 ) {
     
-    optimal = atoi(argv[2]);
-    
     if ( argc == 4 )
       seed = atoi(argv[3]);
     else
       seed = time(0);
-    
+
   } else {
-    
+      
     optimal = 0;
     seed = time(0);
     
   }
-  
+
+  printf("c Population size: %d\n", popsize);
+  printf("c Starting runtime: %.0f\n", runtime);
+  printf("c Runtime step per loop: %.0f\n", runstep);
+  printf("c Step weight: %.3f\n", weight);
+  printf("c Target potential: %d\n", optimal);
   
   // Break out of attempt to put way too large a problem into the system.
   if ( runtime > 8000000 ) {
@@ -337,7 +329,7 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   
   srand48(seed);
   printf("c Seed: %i\n", seed);
-  
+
   if ( initPopulation(&pop, sat, runmode) ) {
     fprintf(stderr,"Could not initialize potential.\n");
     return MEMORY_ERROR;
@@ -349,7 +341,6 @@ int parseCommand(int argc, char **argv, Population *Pptr){
 }
 
 
-
 void update(double a, double b, double mean, Population P, int parity){
   int i,j,k;
   double p,e;
@@ -359,7 +350,7 @@ void update(double a, double b, double mean, Population P, int parity){
   int old = parity*arraysize;
   int new = (1-parity)*arraysize;
   
-  for (i=j=0; (i<P->psize) && (j<arraysize); ++i) {   // Loop over each walker (i) and set target position (j) to zero.
+  for (i=j=0; i<P->psize; ++i) {   // Loop over each walker (i) and set target position (j) to zero.
     p = drand48();
     
     // First potential event: walker steps.
@@ -373,7 +364,7 @@ void update(double a, double b, double mean, Population P, int parity){
         else
           e = getPotential(P->walker[new+j],P->sat);
       }
-      
+
       P->walker[new+j]->potential = e;
       if ( e < min ){
         min = e;
