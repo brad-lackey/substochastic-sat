@@ -159,7 +159,7 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
     if (line[0] != 'p') continue;
     
     // Read in the parameter line.
-    if ( (type = parseHeader(line,&nvars,&ncls)) < 0 ) {
+    if ( (type = parseHeader(line,&nvars,&ncls,&max_weight)) < 0 ) {
       *sat_ptr = NULL;
       return IO_ERROR;
     }
