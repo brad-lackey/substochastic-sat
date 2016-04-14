@@ -136,12 +136,30 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
   int *total_weight;
 #endif
   
+  // Read in the parameter line.
+  if ( (type = parseHeader(line,&nvars,&ncls,&max_weight)) < 0 ) {
+    *sat_ptr = NULL;
+    return IO_ERROR;
+  }
+  
+  // Now create the SAT instance with the given number of variables and clauses.
+  if ( initSAT(&sat, nvars, ncls) ) {
+    *sat_ptr = NULL;
+    return MEMORY_ERROR;
+  }
+  
+  // Create a large enough buffer to read in clause lines for the instance.
+  if ( (buf = (int *) malloc(nvars*sizeof(int))) == NULL ) {
+    *sat_ptr = NULL;
+    return MEMORY_ERROR;
+  }
+  
   // First skip down until the parameter line is found.
   while ( (linelen = getline(&line, &linecap, fp)) > 0 ){
     if (line[0] != 'p') continue;
     
     // Read in the parameter line.
-    if ( (type = parseHeader(line,&nvars,&ncls,&max_weight)) < 0 ) {
+    if ( (type = parseHeader(line,&nvars,&ncls)) < 0 ) {
       *sat_ptr = NULL;
       return IO_ERROR;
     }
@@ -178,8 +196,8 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
 #if TRACK_GLOBAL_BIASES
       free(total_weight);
 #endif
-      *sat_ptr = NULL;
-      return IO_ERROR;
+      min_cls_length = nvars;
+      break;
     }
     
     // Skip over a comment line. (Why have these in the body of the file anyway?)
@@ -187,7 +205,6 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
       --i;
       continue;
     }
-    
     
     if ( type == 0 ) {                // We can read from the beginning of the line.
       w = 1;
@@ -214,9 +231,7 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
       --(sat->num_clauses);
     } else {                      // Otherwise copy the buffer into the instance.
       sat->clause_weight[i] = w;
-      weight_sum += w;
       sat->clause_length[i] = j;
-      avg_cls_length += (double) j;
       if ( j > max_cls_length )
         max_cls_length = j;
       sat->clause[i] = (int *) malloc(j*sizeof(int));
@@ -232,19 +247,11 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
           total_weight[(-buf[j])-1] += abs(w);
         }
 #endif
-        
       }
     }
   }
   
 #if TRACK_GLOBAL_BIASES
-  for (j=0; j<sat->num_vars; ++j) {
-    if ( total_weight[j] > 0 ) {
-      sat->global_bias[j] = (total_weight[j] + INITIAL_BUILD_RELAXATION*sat->global_bias[j])/(2*total_weight[j]);
-    } else{
-      sat->global_bias[j] = 0.5;
-    }
-  }
   free(total_weight);
 #endif
   
@@ -270,9 +277,9 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
       problem_type = UNWEIGHTED_2_SAT;
     
   }
-    
+  
   if ( type == 1 ) { // This is a partial max-sat problem.
-
+    
     
     // Min-sat problems create some strange issues with average clause density.
     if ( avg_cls_length <= 3.1 ){
@@ -282,7 +289,7 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
     if ( avg_cls_length <= 2.1 ){
       problem_type = PARTIAL_2_SAT;
     }
-
+    
   }
   
   if ( type == 2 ){ // This is a weighted max-sat problem.
@@ -464,11 +471,8 @@ void freeSATDerivative(DSAT *dsat_ptr){
 }
 
 
-
-
-
-
 int createIncidenceTable(Table *t_ptr, SAT sat){
+  <<<<<<< HEAD
   int i,j,k,l;
   Table tbl;
   
@@ -507,152 +511,331 @@ int createIncidenceTable(Table *t_ptr, SAT sat){
     for (j=0; j<vlen; ++j){
       if ( (tbl->incident[i][j] = (word_t *) calloc(tlen, sizeof(word_t))) == NULL ) {
         freeIncidenceTable(&tbl);
+        =======
+        int i,j,k,l;
+        Table tbl;
+        
+        if ( (tbl = (Table) malloc(sizeof(struct incidence_table_st))) == NULL ) {
+          >>>>>>> origin/master
+          *t_ptr = NULL;
+          return MEMORY_ERROR;
+        }
+        <<<<<<< HEAD
+      }
+      printf("c Incidence table size: %lu bytes\n",NUM_VARIABLE_WORDS*vlen*tlen*sizeof(word_t));
+#endif
+      
+      for (i=0; i<NUM_CLAUSE_WORDS; ++i) {
+        if ( (tbl->weight[i] = (int *) calloc(clen, sizeof(int))) == NULL ) {
+          freeIncidenceTable(&tbl);
+          *t_ptr = NULL;
+          return MEMORY_ERROR;
+        }
+      }
+      printf("c Weight table size: %lu bytes\n",NUM_CLAUSE_WORDS*clen*sizeof(int));
+      
+      
+      /*
+       if ( (tbl->weight = (int *) malloc(sat->num_clauses*sizeof(int))) == NULL ) {
+       freeIncidenceTable(&tbl);
+       *t_ptr = NULL;
+       return MEMORY_ERROR;
+       }
+       */
+      
+      =======
+      
+      clen = (sat->num_clauses-1)/CLAUSE_WORD_BITS + 1;
+      tlen =(sat->num_clauses-1)/CLAUSE_NUMB_BITS + 1;
+      vlen = (sat->num_vars-1)/VARIABLE_WORD_BITS + 1;
+      printf("c Number of clauses per word: %d\n",NUM_CLAUSE_WORDS);
+      printf("c Number of clause words: %d\n",clen);
+      printf("c Number of variables per word: %d\n",NUM_VARIABLE_WORDS);
+      printf("c Number of variable words: %d\n",vlen);
+      
+      
+      >>>>>>> origin/master
+#if GMP
+      tbl->num_bits = sat->num_clauses;
+      for (i=0; i<(1<<(8*VARIABLE_WORD_SIZE)); ++i) {
+        if ( (tbl->temp[i] = (mpz_t *) malloc(tbl->num_words*sizeof(mpz_t))) == NULL ) {
+          freeIncidenceTable(&tbl);
+          *t_ptr = NULL;
+          return MEMORY_ERROR;
+        }
+        for (j=0; j<tbl->num_words; ++j)
+          mpz_init2(tbl->temp[i][j],sat->num_clauses);
+      }
+#else
+      <<<<<<< HEAD
+      if ( (tbl->buffer = (word_t *) malloc(tlen*sizeof(word_t))) == NULL ) {
+        freeIncidenceTable(&tbl);
         *t_ptr = NULL;
         return MEMORY_ERROR;
       }
-    }
-  }
-  printf("c Incidence table size: %lu bytes\n",NUM_VARIABLE_WORDS*vlen*tlen*sizeof(word_t));
 #endif
-  
-  for (i=0; i<NUM_CLAUSE_WORDS; ++i) {
-    if ( (tbl->weight[i] = (int *) calloc(clen, sizeof(int))) == NULL ) {
-      freeIncidenceTable(&tbl);
-      *t_ptr = NULL;
-      return MEMORY_ERROR;
-    }
-  }
-  printf("c Weight table size: %lu bytes\n",NUM_CLAUSE_WORDS*clen*sizeof(int));
-  
-  
-  /*
-   if ( (tbl->weight = (int *) malloc(sat->num_clauses*sizeof(int))) == NULL ) {
-   freeIncidenceTable(&tbl);
-   *t_ptr = NULL;
-   return MEMORY_ERROR;
-   }
-   */
-  
+      
+      for (i=0; i<sat->num_clauses; ++i) {                         // Loop over clauses.
+        
+        // ------------- Build incidence table -----------
+        for (j=0; j<sat->clause_length[i]; ++j) {                  // Loop over variables in each clause.
+          k = sat->clause[i][j];                                   // Let k be the current variable (1-up).
+          if ( k > 0 ) {                                           // Then this variable is not negated.
+            for (l=0; l<NUM_VARIABLE_WORDS; ++l)                   // Loop over variable set patterns.
+              if (  ((l>>((k-1)%VARIABLE_WORD_BITS))&1) == 1 ) {   // If in this pattern, this variable is set to true...
 #if GMP
-  mpz_init2(tbl->buffer2,sat->num_clauses);
-#else
-  if ( (tbl->buffer = (word_t *) malloc(tlen*sizeof(word_t))) == NULL ) {
-    freeIncidenceTable(&tbl);
-    *t_ptr = NULL;
-    return MEMORY_ERROR;
-  }
-#endif
-  
-  for (i=0; i<sat->num_clauses; ++i) {                         // Loop over clauses.
-    
-    // ------------- Build incidence table -----------
-    for (j=0; j<sat->clause_length[i]; ++j) {                  // Loop over variables in each clause.
-      k = sat->clause[i][j];                                   // Let k be the current variable (1-up).
-      if ( k > 0 ) {                                           // Then this variable is not negated.
-        for (l=0; l<NUM_VARIABLE_WORDS; ++l)                   // Loop over variable set patterns.
-          if (  ((l>>((k-1)%VARIABLE_WORD_BITS))&1) == 1 ) {   // If in this pattern, this variable is set to true...
-#if GMP
-            mpz_setbit(tbl->temp[l][(k-1)/(8*VARIABLE_WORD_SIZE)],i);
+                mpz_setbit(tbl->temp[l][(k-1)/(8*VARIABLE_WORD_SIZE)],i);
 #else                                                          // then mark the i-th bit in the incidence table as true.
-            tbl->incident[l][(k-1)/VARIABLE_WORD_BITS][i/CLAUSE_NUMB_BITS] |= ((word_t) 1) << (i%CLAUSE_NUMB_BITS);
+                tbl->incident[l][(k-1)/VARIABLE_WORD_BITS][i/CLAUSE_NUMB_BITS] |= ((word_t) 1) << (i%CLAUSE_NUMB_BITS);
 #endif
-          }
-      } else {                                                 // Then this variable is negated.
-        for (l=0; l<NUM_VARIABLE_WORDS; ++l)                   // Loop over variable set patterns.
-          if (  ((l>>((-k-1)%VARIABLE_WORD_BITS))&1) == 0 ) {  // If in this pattern, this variable is set to false...
+              }
+          } else {                                                 // Then this variable is negated.
+            for (l=0; l<NUM_VARIABLE_WORDS; ++l)                   // Loop over variable set patterns.
+              if (  ((l>>((-k-1)%VARIABLE_WORD_BITS))&1) == 0 ) {  // If in this pattern, this variable is set to false...
 #if GMP
-            mpz_setbit(tbl->temp[l][(-k-1)/(8*VARIABLE_WORD_SIZE)],i);
+                mpz_setbit(tbl->temp[l][(-k-1)/(8*VARIABLE_WORD_SIZE)],i);
 #else                                                          // then mark the i-th bit in the incidence table as true.
-            tbl->incident[l][(-k-1)/VARIABLE_WORD_BITS][i/CLAUSE_NUMB_BITS] |= ((word_t) 1) << (i%CLAUSE_NUMB_BITS);
+                tbl->incident[l][(-k-1)/VARIABLE_WORD_BITS][i/CLAUSE_NUMB_BITS] |= ((word_t) 1) << (i%CLAUSE_NUMB_BITS);
 #endif
+              }
           }
-      }
-    }
-    
-    // ------------- Build weight table -----------
-    for (j=0; j<NUM_CLAUSE_WORDS; ++j) {                             // Loop over clause patterns.
-      if ( ((j>>(i%CLAUSE_WORD_BITS)) & 1) == 0 ) {                  // If this clause is false...
-        tbl->weight[j][i/CLAUSE_WORD_BITS] += sat->clause_weight[i]; // then add its weight to the table.
-      }
-    }
-    
-  }
-  
-  *t_ptr = tbl;
-  return 0;
-}
-
-void freeIncidenceTable(Table *t_ptr){
-  int j,k;
-  if ( (*t_ptr) != NULL ) {
-    
-    for (j=0; j<VARIABLE_WORD_SIZE; ++j) {
-#if GMP
-      if ( (*t_ptr)->temp[j] != NULL ){
-        for (k=0; k<(*t_ptr)->num_words; ++k)
-          mpz_clear((*t_ptr)->temp[j][k]);
-        free((*t_ptr)->temp[j]);
-      }
-#else
-      if ( (*t_ptr)->incident[j] != NULL ){
-        for (k=0; k<vlen; ++k){
-          if ( (*t_ptr)->incident[j][k] != NULL)
-            free((*t_ptr)->incident[j][k]);
         }
-        free((*t_ptr)->incident[j]);
+        
+        // ------------- Build weight table -----------
+        for (j=0; j<NUM_CLAUSE_WORDS; ++j) {                             // Loop over clause patterns.
+          if ( ((j>>(i%CLAUSE_WORD_BITS)) & 1) == 0 ) {                  // If this clause is false...
+            tbl->weight[j][i/CLAUSE_WORD_BITS] += sat->clause_weight[i]; // then add its weight to the table.
+          }
+        }
+        
       }
-#endif
+      
+      *t_ptr = tbl;
+      return 0;
     }
     
-#if GMP
-    mpz_clear((*t_ptr)->buffer2);
-#else
-    if ( (*t_ptr)->buffer != NULL )
-      free((*t_ptr)->buffer);
+    void freeIncidenceTable(Table *t_ptr){
+      int j,k;
+      if ( (*t_ptr) != NULL ) {
+        
+        for (j=0; j<VARIABLE_WORD_SIZE; ++j) {
+          =======
+          for (i=0; i<NUM_VARIABLE_WORDS; ++i) {
+            if ( (tbl->incident[i] = (word_t **) malloc(vlen*sizeof(word_t *))) == NULL ) {
+              freeIncidenceTable(&tbl);
+              *t_ptr = NULL;
+              return MEMORY_ERROR;
+            }
+            for (j=0; j<vlen; ++j){
+              if ( (tbl->incident[i][j] = (word_t *) calloc(tlen, sizeof(word_t))) == NULL ) {
+                freeIncidenceTable(&tbl);
+                *t_ptr = NULL;
+                return MEMORY_ERROR;
+              }
+            }
+          }
+          printf("c Incidence table size: %lu bytes\n",NUM_VARIABLE_WORDS*vlen*tlen*sizeof(word_t));
 #endif
-    free(*t_ptr);
+          
+          for (i=0; i<NUM_CLAUSE_WORDS; ++i) {
+            if ( (tbl->weight[i] = (int *) calloc(clen, sizeof(int))) == NULL ) {
+              freeIncidenceTable(&tbl);
+              *t_ptr = NULL;
+              return MEMORY_ERROR;
+            }
+          }
+          printf("c Weight table size: %lu bytes\n",NUM_CLAUSE_WORDS*clen*sizeof(int));
+          
+          
+          /*
+           if ( (tbl->weight = (int *) malloc(sat->num_clauses*sizeof(int))) == NULL ) {
+           freeIncidenceTable(&tbl);
+           *t_ptr = NULL;
+           return MEMORY_ERROR;
+           }
+           */
+          
+#if GMP
+          mpz_init2(tbl->buffer2,sat->num_clauses);
+#else
+          if ( (tbl->buffer = (word_t *) malloc(tlen*sizeof(word_t))) == NULL ) {
+            freeIncidenceTable(&tbl);
+            *t_ptr = NULL;
+            return MEMORY_ERROR;
+          }
+#endif
+          
+          for (i=0; i<sat->num_clauses; ++i) {                         // Loop over clauses.
+            
+            // ------------- Build incidence table -----------
+            for (j=0; j<sat->clause_length[i]; ++j) {                  // Loop over variables in each clause.
+              k = sat->clause[i][j];                                   // Let k be the current variable (1-up).
+              if ( k > 0 ) {                                           // Then this variable is not negated.
+                for (l=0; l<NUM_VARIABLE_WORDS; ++l)                   // Loop over variable set patterns.
+                  if (  ((l>>((k-1)%VARIABLE_WORD_BITS))&1) == 1 ) {   // If in this pattern, this variable is set to true...
+#if GMP
+                    mpz_setbit(tbl->temp[l][(k-1)/(8*VARIABLE_WORD_SIZE)],i);
+#else                                                          // then mark the i-th bit in the incidence table as true.
+                    tbl->incident[l][(k-1)/VARIABLE_WORD_BITS][i/CLAUSE_NUMB_BITS] |= ((word_t) 1) << (i%CLAUSE_NUMB_BITS);
+#endif
+                  }
+              } else {                                                 // Then this variable is negated.
+                for (l=0; l<NUM_VARIABLE_WORDS; ++l)                   // Loop over variable set patterns.
+                  if (  ((l>>((-k-1)%VARIABLE_WORD_BITS))&1) == 0 ) {  // If in this pattern, this variable is set to false...
+#if GMP
+                    mpz_setbit(tbl->temp[l][(-k-1)/(8*VARIABLE_WORD_SIZE)],i);
+#else                                                          // then mark the i-th bit in the incidence table as true.
+                    tbl->incident[l][(-k-1)/VARIABLE_WORD_BITS][i/CLAUSE_NUMB_BITS] |= ((word_t) 1) << (i%CLAUSE_NUMB_BITS);
+#endif
+                  }
+              }
+            }
+            
+            // ------------- Build weight table -----------
+            for (j=0; j<NUM_CLAUSE_WORDS; ++j) {                             // Loop over clause patterns.
+              if ( ((j>>(i%CLAUSE_WORD_BITS)) & 1) == 0 ) {                  // If this clause is false...
+                tbl->weight[j][i/CLAUSE_WORD_BITS] += sat->clause_weight[i]; // then add its weight to the table.
+              }
+            }
+            
+          }
+          
+          *t_ptr = tbl;
+          return 0;
+        }
+        
+        void freeIncidenceTable(Table *t_ptr){
+          int j,k;
+          if ( (*t_ptr) != NULL ) {
+            
+            for (j=0; j<VARIABLE_WORD_SIZE; ++j) {
+              >>>>>>> origin/master
+#if GMP
+              if ( (*t_ptr)->temp[j] != NULL ){
+                for (k=0; k<(*t_ptr)->num_words; ++k)
+                  mpz_clear((*t_ptr)->temp[j][k]);
+                free((*t_ptr)->temp[j]);
+              }
+#else
+              <<<<<<< HEAD
+              if ( (*t_ptr)->incident[j] != NULL ){
+                for (k=0; k<vlen; ++k){
+                  if ( (*t_ptr)->incident[j][k] != NULL)
+                    free((*t_ptr)->incident[j][k]);
+                }
+                free((*t_ptr)->incident[j]);
+              }
+#endif
+            }
+            
+            =======
+            if ( (*t_ptr)->incident[j] != NULL ){
+              for (k=0; k<vlen; ++k){
+                if ( (*t_ptr)->incident[j][k] != NULL)
+                  free((*t_ptr)->incident[j][k]);
+              }
+              free((*t_ptr)->incident[j]);
+            }
+#endif
+          }
+          
+          >>>>>>> origin/master
+#if GMP
+          mpz_clear((*t_ptr)->buffer2);
+#else
+          if ( (*t_ptr)->buffer != NULL )
+            free((*t_ptr)->buffer);
+#endif
+          <<<<<<< HEAD
+          free(*t_ptr);
+          
+          for (j=0; j<NUM_CLAUSE_WORDS; ++j)
+            if ( (*t_ptr)->weight[j] != NULL )
+              free((*t_ptr)->weight[j]);
+        }
+        (*t_ptr) = NULL;
+      }
+      
+      int getPotential2(Bitstring bts, Table tbl){
+        int i,j,k;
+        int w;
+        
+        =======
+        free(*t_ptr);
+        
+        for (j=0; j<NUM_CLAUSE_WORDS; ++j)
+          if ( (*t_ptr)->weight[j] != NULL )
+            free((*t_ptr)->weight[j]);
+      }
+      (*t_ptr) = NULL;
+    }
     
-    for (j=0; j<NUM_CLAUSE_WORDS; ++j)
-      if ( (*t_ptr)->weight[j] != NULL )
-        free((*t_ptr)->weight[j]);
-  }
-  (*t_ptr) = NULL;
-}
-
-int getPotential2(Bitstring bts, Table tbl){
-  int i,j,k;
-  int w;
-  
+    int getPotential2(Bitstring bts, Table tbl){
+      int i,j,k;
+      int w;
+      
+      >>>>>>> origin/master
 #if GMP
-  mpz_set_ui(tbl->buffer2,0);
+      mpz_set_ui(tbl->buffer2,0);
 #else
-  for (j=0; j<tlen; ++j) tbl->buffer[j] = 0;
+      <<<<<<< HEAD
+      for (j=0; j<tlen; ++j) tbl->buffer[j] = 0;
 #endif
-  
-  for (i=0; i<vlen; ++i) {
-    j = VARIABLE_WORD_BITS*i;
-    k = (bts->node[j/VARIABLE_NUMB_BITS] >> (j%VARIABLE_NUMB_BITS)) % NUM_VARIABLE_WORDS;
+      
+      for (i=0; i<vlen; ++i) {
+        j = VARIABLE_WORD_BITS*i;
+        k = (bts->node[j/VARIABLE_NUMB_BITS] >> (j%VARIABLE_NUMB_BITS)) % NUM_VARIABLE_WORDS;
+        =======
+        for (j=0; j<tlen; ++j) tbl->buffer[j] = 0;
+#endif
+        
+        for (i=0; i<vlen; ++i) {
+          j = VARIABLE_WORD_BITS*i;
+          k = (bts->node[j/VARIABLE_NUMB_BITS] >> (j%VARIABLE_NUMB_BITS)) % NUM_VARIABLE_WORDS;
+          >>>>>>> origin/master
 #if GMP
-    mpz_ior(tbl->buffer2,tbl->temp[k][i],tbl->buffer2);
+          mpz_ior(tbl->buffer2,tbl->temp[k][i],tbl->buffer2);
 #else
-    for (j=0; j<tlen; ++j)
-      tbl->buffer[j] |= tbl->incident[k][i][j];
+          <<<<<<< HEAD
+          for (j=0; j<tlen; ++j)
+            tbl->buffer[j] |= tbl->incident[k][i][j];
 #endif
-  }
-  
+        }
+        
 #if GMP
-  for (i=j=0; i<tbl->num_bits; ++i){
-    if ( mpz_tstbit(tbl->buffer2,i) == 0 )
-      j += tbl->weight[i];
-  }
+        for (i=j=0; i<tbl->num_bits; ++i){
+          if ( mpz_tstbit(tbl->buffer2,i) == 0 )
+            j += tbl->weight[i];
+        }
 #else
-  for (i=w=0; i<clen; ++i) {
-    j = CLAUSE_WORD_BITS*i;
-    k = (tbl->buffer[j/CLAUSE_NUMB_BITS] >> (j%CLAUSE_NUMB_BITS)) % NUM_CLAUSE_WORDS;
-    w += tbl->weight[k][i];
-  }
+        for (i=w=0; i<clen; ++i) {
+          j = CLAUSE_WORD_BITS*i;
+          k = (tbl->buffer[j/CLAUSE_NUMB_BITS] >> (j%CLAUSE_NUMB_BITS)) % NUM_CLAUSE_WORDS;
+          w += tbl->weight[k][i];
+        }
 #endif
-  
-  return w;
-}
-
+        
+        return w;
+        =======
+        for (j=0; j<tlen; ++j)
+          tbl->buffer[j] |= tbl->incident[k][i][j];
+#endif
+      }
+      
+#if GMP
+      for (i=j=0; i<tbl->num_bits; ++i){
+        if ( mpz_tstbit(tbl->buffer2,i) == 0 )
+          j += tbl->weight[i];
+      }
+#else
+      for (i=w=0; i<clen; ++i) {
+        j = CLAUSE_WORD_BITS*i;
+        k = (tbl->buffer[j/CLAUSE_NUMB_BITS] >> (j%CLAUSE_NUMB_BITS)) % NUM_CLAUSE_WORDS;
+        w += tbl->weight[k][i];
+      }
+#endif
+      
+      return w;
+      >>>>>>> origin/master
+    }
+    

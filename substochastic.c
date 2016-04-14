@@ -62,6 +62,11 @@ int main(int argc, char **argv){
   printf("c Problem loaded: %f seconds\n", time_spent);
   
   
+  end = clock();
+  time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
+  printf("c Problem loaded: %f seconds\n", time_spent);
+  
+  
   if ( (err = initBitstring(&solution)) ){
     fprintf(stderr, "Could not initialize answerspace.\n");
     return err;
@@ -143,7 +148,7 @@ int main(int argc, char **argv){
     }
     
 #endif
-
+    
     ++try;
     randomPopulation(pop,popsize);
   }
@@ -191,9 +196,9 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   tlen =(sat->num_clauses-1)/CLAUSE_NUMB_BITS + 1;
   vlen = (sat->num_vars-1)/VARIABLE_WORD_BITS + 1;
   
- printf("c Bits: %d\n", nbts);
- printf("c Clauses (after tautology removal): %d\n", sat->num_clauses);
- printf("c Problem type: %d\n", problem_type);
+  printf("c Bits: %d\n", nbts);
+  printf("c Clauses (after tautology removal): %d\n", sat->num_clauses);
+  printf("c Problem type: %d\n", problem_type);
   
   
   if ( problem_type == UNKNOWN ) {
@@ -241,6 +246,7 @@ int parseCommand(int argc, char **argv, Population *Pptr){
     runstep = exp(0.022*sat->num_vars + 4.6);
     popsize = 16;
     runmode = 1;
+    
     
   }
   
@@ -296,12 +302,10 @@ int parseCommand(int argc, char **argv, Population *Pptr){
     
     optimal = atoi(argv[2]);
     
-    if ( argc == 4 ) {
+    if ( argc == 4 )
       seed = atoi(argv[3]);
-    } else {
+    else
       seed = time(0);
-    }
-    
     
   } else {
     
