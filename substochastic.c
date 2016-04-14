@@ -75,6 +75,7 @@ int main(int argc, char **argv){
   printf("c Walltime: %f seconds, 0 loops\n", time_spent);
   fflush(stdout);
   min = pop->winner->potential;
+  if (min <= optimal) exit(0);
   
   try = 1;
   while (1) {
@@ -123,38 +124,27 @@ int main(int argc, char **argv){
     
     if ( time_spent > 120 ){
       
-      weight = 0.01;
+      weight = pop->sat->total_weight/150000.0;
       runtime = 8000000.0;
       
-#if TRACK_GLOBAL_BIASES
-      
-      for (i=0; i<pop->sat->num_vars; ++i) {
-        pop->sat->global_bias[i] *= REMIX_PERCENTAGE;
-        u = pop->winner->node[i/VARIABLE_NUMB_BITS] >> (i % VARIABLE_NUMB_BITS);
-        pop->sat->global_bias[i] += (1-REMIX_PERCENTAGE)*(UPDATE_RELAXATION - (2*UPDATE_RELAXATION -1)*(u%2));
-      }
-      
-#endif
-
     } else {
       
       weight = 0.95*weight + 0.05*end_weight;
       runtime += runstep;
       
-#if TRACK_GLOBAL_BIASES
-      
-      for (i=0; i<pop->sat->num_vars; ++i) {
-        pop->sat->global_bias[i] *= REMIX_PERCENTAGE;
-        u = pop->winner->node[i/VARIABLE_NUMB_BITS] >> (i % VARIABLE_NUMB_BITS);
-        pop->sat->global_bias[i] += (1-REMIX_PERCENTAGE)*(UPDATE_RELAXATION - (2*UPDATE_RELAXATION -1)*(u%2));
-      }
-      
-#endif
-      
     }
     
-    ++try;
+#if TRACK_GLOBAL_BIASES
     
+    for (i=0; i<pop->sat->num_vars; ++i) {
+      pop->sat->global_bias[i] *= REMIX_PERCENTAGE;
+      u = pop->winner->node[i/VARIABLE_NUMB_BITS] >> (i % VARIABLE_NUMB_BITS);
+      pop->sat->global_bias[i] += (1-REMIX_PERCENTAGE)*(UPDATE_RELAXATION - (2*UPDATE_RELAXATION -1)*(u%2));
+    }
+    
+#endif
+
+    ++try;
     randomPopulation(pop,popsize);
   }
   
@@ -201,13 +191,13 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   tlen =(sat->num_clauses-1)/CLAUSE_NUMB_BITS + 1;
   vlen = (sat->num_vars-1)/VARIABLE_WORD_BITS + 1;
   
-  printf("c Bits: %d\n", nbts);
-  printf("c Clauses (after tautology removal): %d\n", sat->num_clauses);
-  printf("c Problem type: %d\n", problem_type);
+ printf("c Bits: %d\n", nbts);
+ printf("c Clauses (after tautology removal): %d\n", sat->num_clauses);
+ printf("c Problem type: %d\n", problem_type);
   
   
   if ( problem_type == UNKNOWN ) {
-    weight = sat->total_weight/2500.0;
+    weight = sat->total_weight/5000.0;
     end_weight = 0.01;
     runtime = sat->num_vars*sat->num_vars;
     runstep = runtime/2.0;
@@ -232,7 +222,7 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   
   if (  problem_type == PARTIAL_2_SAT ){
     
-    // Parameters last modified: 13 April 2016 (bclackey)
+    // Parameters finalized: 14 April 2016 (bclackey)
     weight = sat->total_weight/60000.0;
     end_weight = sat->total_weight/100000.0;
     runtime = exp(0.018*sat->num_vars + 3.7);
@@ -256,7 +246,7 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   
   if ( problem_type == UNWEIGHTED_3_SAT ) {
     
-    // Parameters last modified: 13 April 2016 (bclackey)
+    // Parameters finalized: 13 April 2016 (bclackey)
     weight = sat->total_weight/5000.0;
     end_weight = sat->total_weight/10000.0;
     runtime = exp(0.035*sat->num_vars + 6.1);
@@ -268,7 +258,7 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   
   if ( problem_type == PARTIAL_3_SAT ) {
     
-    // Parameters last modified: 13 April 2016 (bclackey)
+    // Parameters finalized: 14 April 2016 (bclackey)
     weight = sat->total_weight/16000.0;
     end_weight = sat->total_weight/200000.0;
     runtime = exp(0.031*sat->num_vars + 4.4);
@@ -294,7 +284,7 @@ int parseCommand(int argc, char **argv, Population *Pptr){
     
     // Parameters last modified: 13 April 2016 (bclackey)
     weight = sat->total_weight/8000.0;
-    end_weight = 0.001;
+    end_weight = 0.01;
     runtime = exp(0.032*sat->num_vars + 9.3);
     runstep = exp(0.036*sat->num_vars + 7.9);
     popsize = 16;
@@ -327,6 +317,10 @@ int parseCommand(int argc, char **argv, Population *Pptr){
     runstep = 0;
     weight = 0.1;
     end_weight = 0.01;
+  }
+  if ( runtime < 500 ){
+    runtime = 500;
+    runstep = 100;
   }
   
   //  printf("c Population size: %d\n", popsize);

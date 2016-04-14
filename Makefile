@@ -1,22 +1,14 @@
 CC=gcc
-#CFLAGS=-O3 -fvectorize -funroll-loops
 CFLAGS=-O3 -funroll-loops -Wall
 LINK=-lm
-#INC=-I/opt/local/include
-#LIB=-L/opt/local/lib
-#LINK=-lm -lgmp
+INC=
+LIB=
 
-all : substochastic verify process
+all : ssmc
 
-substochastic : substochastic.c bitstring.o sat.o population.o
-	$(CC) $(CFLAGS) $(INC) substochastic.c bitstring.o sat.o population.o $(LIB) $(LINK) -o substochastic
-	strip substochastic
-
-verify : verify.c
-	$(CC) -Wall verify.c -o verify
-
-process : process.c
-	$(CC) -Wall process.c -o process
+ssmc : substochastic.c bitstring.o sat.o population.o
+	$(CC) $(CFLAGS) $(INC) substochastic.c bitstring.o sat.o population.o $(LIB) $(LINK) -o ssmc
+	strip ssmc
 
 bitstring.o : bitstring.c bitstring.h macros.h
 	$(CC) $(CFLAGS) $(INC) -c bitstring.c 
