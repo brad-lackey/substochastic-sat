@@ -477,10 +477,10 @@ int createIncidenceTable(Table *t_ptr, SAT sat){
   clen = (sat->num_clauses-1)/CLAUSE_WORD_BITS + 1;
   tlen =(sat->num_clauses-1)/CLAUSE_NUMB_BITS + 1;
   vlen = (sat->num_vars-1)/VARIABLE_WORD_BITS + 1;
-  printf("c Number of clauses per word: %d\n",NUM_CLAUSE_WORDS);
-  printf("c Number of clause words: %d\n",clen);
-  printf("c Number of variables per word: %d\n",NUM_VARIABLE_WORDS);
-  printf("c Number of variable words: %d\n",vlen);
+//  printf("c Number of clauses per word: %d\n",NUM_CLAUSE_WORDS);
+//  printf("c Number of clause words: %d\n",clen);
+//  printf("c Number of variables per word: %d\n",NUM_VARIABLE_WORDS);
+//  printf("c Number of variable words: %d\n",vlen);
   
   
 #if GMP
@@ -509,7 +509,7 @@ int createIncidenceTable(Table *t_ptr, SAT sat){
       }
     }
   }
-  printf("c Incidence table size: %lu bytes\n",NUM_VARIABLE_WORDS*vlen*tlen*sizeof(word_t));
+//  printf("c Incidence table size: %lu bytes\n",NUM_VARIABLE_WORDS*vlen*tlen*sizeof(word_t));
 #endif
   
   for (i=0; i<NUM_CLAUSE_WORDS; ++i) {
@@ -519,7 +519,7 @@ int createIncidenceTable(Table *t_ptr, SAT sat){
       return MEMORY_ERROR;
     }
   }
-  printf("c Weight table size: %lu bytes\n",NUM_CLAUSE_WORDS*clen*sizeof(int));
+//  printf("c Weight table size: %lu bytes\n",NUM_CLAUSE_WORDS*clen*sizeof(int));
   
 #if GMP
   tbl->num_bits = sat->num_clauses;

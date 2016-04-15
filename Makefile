@@ -20,4 +20,4 @@ population.o: population.c population.h macros.h bitstring.h sat.h
 	$(CC) $(CFLAGS) $(INC) -c population.c
 
 clean :
-	rm -f *~ verify substochastic process *.o
+	rm -f *~ ssmc *.o

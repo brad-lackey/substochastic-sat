@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-$queue_size = 22;
+$queue_size = 10;
 
 (scalar(@ARGV) == 4) or die "Usage: ./testrun.pl command <filelist.dat> trials tag\n";
 

@@ -59,7 +59,7 @@ int main(int argc, char **argv){
   
   end = clock();
   time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
-  printf("c Problem loaded: %f seconds\n", time_spent);
+//  printf("c Problem loaded: %f seconds\n", time_spent);
 
   if ( (err = initBitstring(&solution)) ){
     fprintf(stderr, "Could not initialize answerspace.\n");
@@ -72,7 +72,7 @@ int main(int argc, char **argv){
   time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
   printf("o %i\n", pop->winner->potential);
   printBits(stdout, pop->winner);
-  printf("c Walltime: %f seconds, 0 loops\n", time_spent);
+//  printf("c Walltime: %f seconds, 0 loops\n", time_spent);
   fflush(stdout);
   min = pop->winner->potential;
   if (min <= optimal) exit(0);
@@ -108,7 +108,7 @@ int main(int argc, char **argv){
       if ( pop->winner->potential < local_min ) {
         local_min = pop->winner->potential;
         printf("o %i\n", local_min);
-        printf("c Walltime: %f seconds, %d loops\n", time_spent, try);
+//        printf("c Walltime: %f seconds, %d loops\n", time_spent, try);
         fflush(stdout);
         if (local_min <= optimal) {
           break;
@@ -181,9 +181,12 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   }
   
   printf("c ------------------------------------------------------\n");
-  printf("c Substochastic Monte Carlo, version 1.0                \n");
-  printf("c Brad Lackey, Stephen Jordan, and Michael Jarret, 2016.\n");
-  printf("c ------------------------------------------------------\n");
+  printf("c ----------------------------------------------------------\n");
+  printf("c Substochastic Monte Carlo, version 1.0, 2016\n");
+  printf("c Michael Jarret, Stephen Jordan, and Brad Lackey\n");
+  printf("c Joint Center for Quantum Information and Computer Science\n");
+  printf("c University of Maryland, College Park.\n");
+  printf("c ----------------------------------------------------------\n");
   printf("c Input: %s\n", argv[1]);
   
   if ( (fp = fopen(argv[1], "r")) == NULL ){
@@ -200,9 +203,9 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   
   setBitLength(sat->num_vars);
   
-  printf("c Bits: %d\n", nbts);
-  printf("c Clauses (after tautology removal): %d\n", sat->num_clauses);
-  printf("c Problem type: %d\n", problem_type);
+//  printf("c Bits: %d\n", nbts);
+//  printf("c Clauses (after tautology removal): %d\n", sat->num_clauses);
+//  printf("c Problem type: %d\n", problem_type);
   
   if ( problem_type == UNKNOWN ) {
     weight = sat->total_weight/5000.0;
@@ -306,7 +309,7 @@ int parseCommand(int argc, char **argv, Population *Pptr){
     optimal = atoi(argv[2]);
     
     if ( argc == 4 )
-      seed = time(0) + atoi(argv[3]);
+      seed = atoi(argv[3]);
     else
       seed = time(0);
 
@@ -334,7 +337,7 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   //  printf("c Starting runtime: %.0f\n", runtime);
   //  printf("c Runtime step per loop: %.0f\n", runstep);
   //  printf("c Step weight: %.3f\n", weight);
-  //  printf("c Target potential: %d\n", optimal);
+  printf("c Target potential: %d\n", optimal);
   
   arraysize = 2000;
   
