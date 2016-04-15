@@ -25,7 +25,7 @@ extern int arraysize;
 extern int problem_type;
 
 static int popsize,runmode;
-static double weight, runtime, runstep;
+static double weight, end_weight, runtime, runstep;
 static int optimal;
 
 
@@ -40,7 +40,7 @@ int main(int argc, char **argv){
   double mean;
   double a, b, t, dt;
   Population pop;
-  double min = -1;      //the best minimum from different trials
+  int local_min, min = -1;      //the best minimum from different trials
   Bitstring solution;   //the corresponding bitstring
   clock_t beg, end;     //for code timing
   double time_spent;    //for code timing
@@ -70,6 +70,7 @@ int main(int argc, char **argv){
   randomPopulation(pop,popsize);
   end = clock();
   time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
+  printf("o %i\n", pop->winner->potential);
   printBits(stdout, pop->winner);
   printf("c Walltime: %f seconds, 0 loops\n", time_spent);
   fflush(stdout);
@@ -82,7 +83,8 @@ int main(int argc, char **argv){
     t = 0.0;
     parity = 0;
     randomPopulation(pop,popsize);
-    
+    local_min = min;
+
     while (t < runtime) {
       
       // The annealing schedule
@@ -100,26 +102,38 @@ int main(int argc, char **argv){
       
       update(a*dt, b*dt, mean, pop, parity);
       
+      end = clock();
+      time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
       
+      if ( pop->winner->potential < local_min ) {
+        local_min = pop->winner->potential;
+        printf("o %i\n", local_min);
+        printf("c Walltime: %f seconds, %d loops\n", time_spent, try);
+        fflush(stdout);
+        if (local_min <= optimal) {
+          break;
+        }
+      }
+      if ( time_spent > 290 )
+        break;
+
       t += dt;
       parity ^= 1;
+      
     }
     
-    end = clock();
-    time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
-    
-    if ((min<0) || (pop->winner->potential < min)) {
-      printBits(stdout, pop->winner);
-      printf("c Walltime: %f seconds, %d loops\n", time_spent, try);
-      fflush(stdout);
-      min = pop->winner->potential;
+    if ( local_min < min ) {
+      min = local_min;
       copyBitstring(solution, pop->winner);
-      if (min == optimal) {
-        break;
+      printBits(stdout, solution);
+      if (min <= optimal) {
+        return 0;
       }
     }
-    if ( time_spent > 270 )
-      break;
+    
+    if ( time_spent > 290 ){
+      return 1;
+    }
     
     if ( time_spent > 120 ){
       
@@ -289,8 +303,10 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   
   if ( argc >= 3 ) {
     
+    optimal = atoi(argv[2]);
+    
     if ( argc == 4 )
-      seed = atoi(argv[3]);
+      seed = time(0) + atoi(argv[3]);
     else
       seed = time(0);
 
@@ -301,11 +317,6 @@ int parseCommand(int argc, char **argv, Population *Pptr){
     
   }
 
-  printf("c Population size: %d\n", popsize);
-  printf("c Starting runtime: %.0f\n", runtime);
-  printf("c Runtime step per loop: %.0f\n", runstep);
-  printf("c Step weight: %.3f\n", weight);
-  printf("c Target potential: %d\n", optimal);
   
   // Break out of attempt to put way too large a problem into the system.
   if ( runtime > 8000000 ) {

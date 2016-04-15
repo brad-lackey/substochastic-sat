@@ -35,7 +35,7 @@ typedef unsigned long word_t;
 
 #if TRACK_GLOBAL_BIASES
 #define INITIAL_BUILD_RELAXATION 0.95  ///< Relaxation on the initial distribution based on examining the SAT instance.
-#define UPDATE_RELAXATION        0.95  ///< Relaxation on the update distribution given by the previous winner(s).
+#define UPDATE_RELAXATION        0.90  ///< Relaxation on the update distribution given by the previous winner(s).
 #define REMIX_PERCENTAGE         0.60  ///< What percentage of the previous distribution is kept in the next step.
 #endif
 

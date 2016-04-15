@@ -136,24 +136,6 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
   int *total_weight;
 #endif
   
-  // Read in the parameter line.
-  if ( (type = parseHeader(line,&nvars,&ncls,&max_weight)) < 0 ) {
-    *sat_ptr = NULL;
-    return IO_ERROR;
-  }
-  
-  // Now create the SAT instance with the given number of variables and clauses.
-  if ( initSAT(&sat, nvars, ncls) ) {
-    *sat_ptr = NULL;
-    return MEMORY_ERROR;
-  }
-  
-  // Create a large enough buffer to read in clause lines for the instance.
-  if ( (buf = (int *) malloc(nvars*sizeof(int))) == NULL ) {
-    *sat_ptr = NULL;
-    return MEMORY_ERROR;
-  }
-  
   // First skip down until the parameter line is found.
   while ( (linelen = getline(&line, &linecap, fp)) > 0 ){
     if (line[0] != 'p') continue;
@@ -196,8 +178,8 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
 #if TRACK_GLOBAL_BIASES
       free(total_weight);
 #endif
-      min_cls_length = nvars;
-      break;
+      *sat_ptr = NULL;
+      return IO_ERROR;
     }
     
     // Skip over a comment line. (Why have these in the body of the file anyway?)
@@ -205,6 +187,7 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
       --i;
       continue;
     }
+    
     
     if ( type == 0 ) {                // We can read from the beginning of the line.
       w = 1;
@@ -231,7 +214,9 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
       --(sat->num_clauses);
     } else {                      // Otherwise copy the buffer into the instance.
       sat->clause_weight[i] = w;
+      weight_sum += w;
       sat->clause_length[i] = j;
+      avg_cls_length += (double) j;
       if ( j > max_cls_length )
         max_cls_length = j;
       sat->clause[i] = (int *) malloc(j*sizeof(int));
@@ -247,11 +232,19 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
           total_weight[(-buf[j])-1] += abs(w);
         }
 #endif
+        
       }
     }
   }
   
 #if TRACK_GLOBAL_BIASES
+  for (j=0; j<sat->num_vars; ++j) {
+    if ( total_weight[j] > 0 ) {
+      sat->global_bias[j] = (total_weight[j] + INITIAL_BUILD_RELAXATION*sat->global_bias[j])/(2*total_weight[j]);
+    } else{
+      sat->global_bias[j] = 0.5;
+    }
+  }
   free(total_weight);
 #endif
   
@@ -310,6 +303,7 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
   
   return 0;
 }
+
 
 /**
  * @param sat_ptr points to the SAT instance to be destroyed.

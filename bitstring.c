@@ -34,7 +34,6 @@ void printBits(FILE *fp, Bitstring bst) {
   int i;
   int val;
   
-  fprintf(fp,"o %i\n", bst->potential);
   fprintf(fp,"v ");
   
   for(i = 0; i < nbts; i++) {

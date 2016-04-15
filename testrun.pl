@@ -1,16 +1,14 @@
 #!/usr/bin/perl
 
-$queue_size = 6;
+$queue_size = 22;
 
-(scalar(@ARGV) == 4) or (scalar(@ARGV) == 6) or die "Usage: ./testrun.pl command <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n";
+(scalar(@ARGV) == 4) or die "Usage: ./testrun.pl command <filelist.dat> trials tag\n";
 
 # Just to be completely clear:
 $command = $ARGV[0];
 $filelist = $ARGV[1];
 $trials = $ARGV[2];
 $tag = $ARGV[3];
-$weight = $ARGV[4];
-$runtime = $ARGV[5];
 
 # Load int the data file and create the list of all jobs.
 open(DAT, "<$filelist");
@@ -21,7 +19,7 @@ while(<DAT>){
     my $optimal = $a[3];
     my $besttime = $a[6];
     for (my $t = 0; $t < $trials; $t += 1){
-        push(@stack, $command . " $file $optimal $t $weight $runtime");
+        push(@stack, $command . " $file $optimal");
     }
     $opt{$a[0]} = $optimal;
     $time{$a[0]} = $besttime;
