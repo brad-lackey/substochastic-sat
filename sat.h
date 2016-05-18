@@ -1,7 +1,7 @@
 /** @file  sat.h
  * @brief Header file for a weighted SAT potential.
  *
- * Created by Brad Lackey on 3/14/16. Last modified 4/7/16.
+ * Created by Brad Lackey on 3/14/16. Last modified 5/18/16.
  */
 
 #ifndef sat_h
@@ -33,7 +33,7 @@ struct sat_st {
   int num_vars;           ///< Number of variables in the instance.
   int num_clauses;        ///< Number of problems in the instance.
   int total_weight;
-  int *clause_weight;     ///< Array holding the clause weights.
+  potential_t *clause_weight;     ///< Array holding the clause weights.
   int *clause_length;     ///< Array holding the length of each clause.
   int **clause;           ///< Array of clauses.
 #if TRACK_GLOBAL_BIASES
@@ -47,7 +47,7 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr);     ///< Create a SAT instance from 
 void freeSAT(SAT *sat_ptr);                     ///< Deallocation routine for a SAT instance.
 void printSAT(FILE *fp, SAT sat);               ///< Print in DIMACS format.
 
-int getPotential(Bitstring bts, SAT sat);       ///< Evaluates the SAT instance on the passed bitstring.
+potential_t getPotential(Bitstring bts, SAT sat);       ///< Evaluates the SAT instance on the passed bitstring.
 
 
 /// This is the underlying type for the derivative of a SAT instance.
@@ -80,12 +80,12 @@ struct incidence_table_st {
   word_t **incident[NUM_VARIABLE_WORDS];
   word_t *buffer;
 #endif
-  int *weight[NUM_CLAUSE_WORDS];
+  potential_t *weight[NUM_CLAUSE_WORDS];
 };
 
 int createIncidenceTable(Table *t_ptr, SAT sat);
 void freeIncidenceTable(Table *t_ptr);
 
-int getPotential2(Bitstring bts, Table tbl);
+potential_t getPotential2(Bitstring bts, Table tbl);
 
 #endif /* sat_h */

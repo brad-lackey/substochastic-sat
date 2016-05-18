@@ -1,7 +1,7 @@
 /** @file  sat.c
  * @brief Source file for a SAT potential type in the Substochastic library.
  *
- * Created by Brad Lackey on 3/14/16. Last modified 4/7/16.
+ * Created by Brad Lackey on 3/14/16. Last modified 5/18/16.
  */
 
 #include <string.h>
@@ -28,7 +28,7 @@ int initSAT(SAT *sat_ptr, int nvars, int ncls){
   
   sat->num_vars = nvars;
   sat->num_clauses = ncls;
-  if ( (sat->clause_weight = (int *) calloc(ncls,sizeof(int))) == NULL ) {
+  if ( (sat->clause_weight = (potential_t *) calloc(ncls,sizeof(potential_t))) == NULL ) {
     freeSAT(&sat);
     *sat_ptr = NULL;
     return MEMORY_ERROR;
@@ -81,13 +81,14 @@ int dedupe(int *buffer, int size){
 }
 
 // Parse out the type of problem and parameters.
-int parseHeader(char *line, int *nv, int *nc, int *mw){
+int parseHeader(char *line, int *nv, int *nc, potential_t *mw){
   int argc;
   char prob[50];
-  int nvars, ncls, maxw;
+  int nvars, ncls;
+  potential_t maxw;
   
   // Scan the line and if it does not have the right form: reject.
-  if ( (argc = sscanf(line, "p %s %d %d %d", prob, &nvars, &ncls, &maxw)) < 3 ){
+  if ( (argc = sscanf(line, "p %s %d %d %ld", prob, &nvars, &ncls, &maxw)) < 3 ){
     return -1;
   }
   
@@ -120,7 +121,7 @@ int parseHeader(char *line, int *nv, int *nc, int *mw){
  * @return Number of variables if successful, zero if failed.
  */
 int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
-  int i,j,k,w,off,type;
+  int i,j,k,off,type;
   int *buf;
   SAT sat = NULL;
   char *line = NULL;
@@ -129,11 +130,11 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
   int nvars,ncls;
   int max_cls_length = 0;
   int min_cls_length;
-  int weight_sum = 0;
+  potential_t weight_sum = 0;
   double avg_cls_length = 0.0;
-  int max_weight;
+  potential_t w,max_weight;
 #if TRACK_GLOBAL_BIASES
-  int *total_weight;
+  potential_t *total_weight;
 #endif
   
   // First skip down until the parameter line is found.
@@ -159,7 +160,7 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
     }
     
 #if TRACK_GLOBAL_BIASES
-    if ( (total_weight = (int *) calloc(nvars,sizeof(int))) == NULL ) {
+    if ( (total_weight = (potential_t *) calloc(nvars,sizeof(potential_t))) == NULL ) {
       free(buf);
       *sat_ptr = NULL;
       return MEMORY_ERROR;
@@ -193,7 +194,7 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
       w = 1;
       off = 0;
     } else {                          // We need to read off the variable weight first.
-      sscanf(line,"%d%n",&w,&off);
+      sscanf(line,"%ld%n",&w,&off);
     }
     
     // Now read in the terms.
@@ -226,10 +227,10 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
 #if TRACK_GLOBAL_BIASES
         if( buf[j] > 0 ){ // then this variable prefers to be true in this clause...
           sat->global_bias[buf[j]-1] += -w; // so it gets a penalty if it is set to false.
-          total_weight[buf[j]-1] += abs(w);
+          total_weight[buf[j]-1] += labs(w);
         } else {          // then it would rather be false...
           sat->global_bias[(-buf[j])-1] += w; // so it gets a penalty if it is set to true.
-          total_weight[(-buf[j])-1] += abs(w);
+          total_weight[(-buf[j])-1] += labs(w);
         }
 #endif
         
@@ -339,7 +340,7 @@ void printSAT(FILE *fp, SAT sat){
   
   fprintf(fp, "p wcnf %d %d\n", sat->num_vars, sat->num_clauses);
   for (i=0; i<sat->num_clauses; ++i) {
-    fprintf(fp, "%d ",sat->clause_weight[i]);
+    fprintf(fp, "%ld ",sat->clause_weight[i]);
     for (j=0; j<sat->clause_length[i]; ++j)
       fprintf(fp, "%d ", sat->clause[i][j]);
     fprintf(fp,"0 \n");
@@ -353,11 +354,12 @@ void printSAT(FILE *fp, SAT sat){
  * @param sat is the SAT instance that holds the potential.
  * @return The potential value.
  */
-int getPotential(Bitstring bts, SAT sat){
+potential_t getPotential(Bitstring bts, SAT sat){
   int i,j;
   int k,l;
-  int p,q,v;
+  int p,q;
   word_t r;
+  potential_t v;
   
   for (i=v=0; i<sat->num_clauses; ++i) {        // Loop through the clauses; set the output to zero.
     l = sat->clause_length[i];                  // Store off the length of the i-th clause.
@@ -513,7 +515,7 @@ int createIncidenceTable(Table *t_ptr, SAT sat){
 #endif
   
   for (i=0; i<NUM_CLAUSE_WORDS; ++i) {
-    if ( (tbl->weight[i] = (int *) calloc(clen, sizeof(int))) == NULL ) {
+    if ( (tbl->weight[i] = (potential_t *) calloc(clen, sizeof(potential_t))) == NULL ) {
       freeIncidenceTable(&tbl);
       *t_ptr = NULL;
       return MEMORY_ERROR;
@@ -617,9 +619,10 @@ void freeIncidenceTable(Table *t_ptr){
   (*t_ptr) = NULL;
 }
 
-int getPotential2(Bitstring bts, Table tbl){
+
+potential_t getPotential2(Bitstring bts, Table tbl){
   int i,j,k;
-  int w;
+  potential_t w;
   
   
 #if GMP

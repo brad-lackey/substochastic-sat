@@ -1,7 +1,7 @@
 /** @file  substochastic.c
  * @brief Main file for Substochastic Monte Carlo.
  *
- * Created by Brad Lackey on 3/14/16. Last modified 4/7/16.
+ * Created by Brad Lackey on 3/14/16. Last modified 5/18/16.
  */
 
 #include <stdio.h>
@@ -26,7 +26,7 @@ extern int problem_type;
 
 static int popsize,runmode;
 static double weight, end_weight, runtime, runstep;
-static int optimal;
+static potential_t optimal;
 
 
 
@@ -40,7 +40,7 @@ int main(int argc, char **argv){
   double mean;
   double a, b, t, dt;
   Population pop;
-  int local_min, min = -1;      //the best minimum from different trials
+  potential_t local_min, min = -1;      //the best minimum from different trials
   Bitstring solution;   //the corresponding bitstring
   clock_t beg, end;     //for code timing
   double time_spent;    //for code timing
@@ -70,7 +70,7 @@ int main(int argc, char **argv){
   randomPopulation(pop,popsize);
   end = clock();
   time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
-  printf("o %i\n", pop->winner->potential);
+  printf("o %ld\n", pop->winner->potential);
   printBits(stdout, pop->winner);
 //  printf("c Walltime: %f seconds, 0 loops\n", time_spent);
   fflush(stdout);
@@ -107,7 +107,7 @@ int main(int argc, char **argv){
       
       if ( pop->winner->potential < local_min ) {
         local_min = pop->winner->potential;
-        printf("o %i\n", local_min);
+        printf("o %ld\n", local_min);
 //        printf("c Walltime: %f seconds, %d loops\n", time_spent, try);
         fflush(stdout);
         if (local_min <= optimal) {
@@ -126,6 +126,7 @@ int main(int argc, char **argv){
       min = local_min;
       copyBitstring(solution, pop->winner);
       printBits(stdout, solution);
+      fflush(stdout);
       if (min <= optimal) {
         return 0;
       }
@@ -337,7 +338,7 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   //  printf("c Starting runtime: %.0f\n", runtime);
   //  printf("c Runtime step per loop: %.0f\n", runstep);
   //  printf("c Step weight: %.3f\n", weight);
-  printf("c Target potential: %d\n", optimal);
+  printf("c Target potential: %ld\n", optimal);
   
   arraysize = 2000;
   
@@ -358,9 +359,9 @@ int parseCommand(int argc, char **argv, Population *Pptr){
 void update(double a, double b, double mean, Population P, int parity){
   int i,j,k;
   double p,e;
-  int min = P->sat->num_clauses;
+  potential_t min = P->sat->num_clauses;
   double avg = 0.0;
-  int max = -(P->sat->num_clauses);
+  potential_t max = -(P->sat->num_clauses);
   int old = parity*arraysize;
   int new = (1-parity)*arraysize;
   

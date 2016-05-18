@@ -1,7 +1,7 @@
 /** @file  bitstring.h
  * @brief Header file for a weighted bitstring.
  *
- * Created by Brad Lackey on 3/14/16. Last modified 4/2/16.
+ * Created by Brad Lackey on 3/14/16. Last modified 5/18/16.
  */
 
 #ifndef bitstring_h
@@ -26,7 +26,7 @@ typedef struct bitstring_st * Bitstring;
 
 struct bitstring_st {
   word_t *node;                ///< The array that holds the bits.
-  int potential;               ///< The weight associated to this bitstring.
+  potential_t potential;               ///< The weight associated to this bitstring.
 };
 
 // Ancillary routines

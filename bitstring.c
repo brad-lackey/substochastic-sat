@@ -1,7 +1,7 @@
 /** @file  bitstring.c
  * @brief Source file for a weighted bitstring.
  *
- * Created by Brad Lackey on 3/14/16. Last modified 4/2/16.
+ * Created by Brad Lackey on 3/14/16. Last modified 5/18/16.
  */
 
 #include <stdio.h>
@@ -66,7 +66,7 @@ int initBitstring(Bitstring *bst_ptr){
   }
   
   // Initialize the potential to be negative, and pass the created bitstring to output.
-  bst->potential = -1;
+  bst->potential = (potential_t) -1;
   (*bst_ptr) = bst;
   
   return 0;

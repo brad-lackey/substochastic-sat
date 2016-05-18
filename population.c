@@ -1,7 +1,7 @@
 /** @file  population.c
  * @brief Source file for a population.
  *
- * Created by Brad Lackey on 3/30/16. Last modified 4/7/16.
+ * Created by Brad Lackey on 3/30/16. Last modified 5/18/16.
  */
 
 #include <stdio.h>
@@ -111,7 +111,7 @@ void freePopulation(Population *Pptr){
  */
 void randomPopulation(Population P, int size){
   int i, argmin;
-  int e, min, max;
+  potential_t e, min, max;
   double avg;
   
 #if TRACK_GLOBAL_BIASES

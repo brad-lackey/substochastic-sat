@@ -1,7 +1,7 @@
 /** @file macros.h
  * @brief Header file defining all the macros.
  *
- * Created by Brad Lackey on 3/14/16. Last modified 4/7/16.
+ * Created by Brad Lackey on 3/14/16. Last modified 5/18/16.
  */
 
 #ifndef _macros_h
@@ -14,6 +14,7 @@
 #define OUT_OF_BOUNDS_ERROR 4  ///< Error code for passing bad bounds to an array.
 
 typedef unsigned long word_t;
+typedef long potential_t;
 
 #define VARIABLE_WORD_SIZE 1   ///< Number of bytes per word in generating bitstring lookup table.
 
