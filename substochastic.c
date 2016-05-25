@@ -23,6 +23,7 @@ extern int blen;
 extern int nbts;
 extern int arraysize;
 extern int problem_type;
+extern potential_t topweight;
 
 static int popsize,runmode;
 static double weight, end_weight, runtime, runstep;
@@ -58,7 +59,7 @@ int main(int argc, char **argv){
   }
   
   end = clock();
-  time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
+//  time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
 //  printf("c Problem loaded: %f seconds\n", time_spent);
 
   if ( (err = initBitstring(&solution)) ){
@@ -69,10 +70,14 @@ int main(int argc, char **argv){
   
   randomPopulation(pop,popsize);
   end = clock();
-  time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
-  printf("o %ld\n", pop->winner->potential);
-  printBits(stdout, pop->winner);
-//  printf("c Walltime: %f seconds, 0 loops\n", time_spent);
+  if ( pop->winner->potential < topweight ) {
+    printf("o %ld\n", pop->winner->potential);
+    fflush(stdout);
+    printBits(stdout, pop->winner);
+    fflush(stdout);
+//       time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
+//       printf("c Walltime: %f seconds, 0 loops\n", time_spent);
+  }
   fflush(stdout);
   min = pop->winner->potential;
   if (min <= optimal) exit(0);
@@ -107,9 +112,11 @@ int main(int argc, char **argv){
       
       if ( pop->winner->potential < local_min ) {
         local_min = pop->winner->potential;
-        printf("o %ld\n", local_min);
-//        printf("c Walltime: %f seconds, %d loops\n", time_spent, try);
-        fflush(stdout);
+        if ( local_min < topweight ) {
+          printf("o %ld\n", local_min);
+// printf("c Walltime: %f seconds, %d loops\n", time_spent, try);
+          fflush(stdout);
+        }
         if (local_min <= optimal) {
           break;
         }
@@ -125,8 +132,10 @@ int main(int argc, char **argv){
     if ( local_min < min ) {
       min = local_min;
       copyBitstring(solution, pop->winner);
-      printBits(stdout, solution);
-      fflush(stdout);
+      if ( min < topweight ) {
+        printBits(stdout, solution);
+        fflush(stdout);
+      }
       if (min <= optimal) {
         return 0;
       }
@@ -339,7 +348,7 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   //  printf("c Runtime step per loop: %.0f\n", runstep);
   //  printf("c Step weight: %.3f\n", weight);
   printf("c Target potential: %ld\n", optimal);
-  
+  printf("c Top potential: %ld\n", topweight);
   arraysize = 2000;
   
   srand48(seed);

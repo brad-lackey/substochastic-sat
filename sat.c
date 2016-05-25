@@ -261,6 +261,8 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
   
   if ( type == 0 ) { // This is an unweighted max-sat problem.
     
+    topweight = weight_sum;
+    
     if ( avg_cls_length < 4.01)
       problem_type = UNWEIGHTED_4_SAT;
     
@@ -274,6 +276,7 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
   
   if ( type == 1 ) { // This is a partial max-sat problem.
     
+    topweight = max_weight;
     
     // Min-sat problems create some strange issues with average clause density.
     if ( avg_cls_length <= 3.1 ){
@@ -287,6 +290,8 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
   }
   
   if ( type == 2 ){ // This is a weighted max-sat problem.
+    
+    topweight = weight_sum;
     
     if ( max_cls_length <= 4) {
       problem_type = WEIGHTED_4_SAT;

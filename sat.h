@@ -21,6 +21,7 @@ int problem_type;
 int clen;           /// The length of clause strings (in words).
 int tlen;           /// The length of clause strings (in numbs).
 int vlen;           /// The length of variable strings (in words).
+potential_t topweight;
 
 /// The underlying type for a SAT instance.
 /**
