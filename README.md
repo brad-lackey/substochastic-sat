@@ -10,4 +10,4 @@ c ----------------------------------------------------------+
 
 make all
 
-Usage: ./ssmc <instance.cnf> [<target optimum> [<seed>]]
+Usage: ./ssmc instance.cnf [target-optimum [seed]]
