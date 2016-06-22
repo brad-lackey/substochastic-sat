@@ -1,0 +1,6 @@
+{
+  "name": "Substochastic-sat",
+  "tagline": "Substochastic Monte Carlo applied to MAX-SAT",
+  "body": "# substochastic-sat\r\n\r\nSubstochastic Monte Carlo applied to MAX-SAT\r\n\r\n---\r\n>Michael Jarret, Stephen Jordan, and Brad Lackey<br>\r\n[Joint Center for Quantum Information and Computer Science](http://quics.umd.edu/)<br>\r\n[University of Maryland, College Park](http://umd.edu/)<br>\r\n\r\n![QuICS](http://quics.umd.edu/sites/quics.umd.edu/themes/quics/logo.png)",
+  "note": "Don't delete this file! It's used internally to help with page regeneration."
+}
