@@ -44,23 +44,32 @@
 
 <p>Substochastic Monte Carlo applied to MAX-SAT</p>
 
-<p>Substochastic Monte Carlo (SSMC) is a classical process based on the quantum adiabatic optimization algorithm. Given an objective function and a continuous-time Markov chain, one forms a substochastic process whose dynamics is governed by the Markov chain, and stopping time by the objective function. The dynamics of this process, conditioned on not having stopped, stay close to the adiabatic evolution, given a sufficiently long runtime. So, with long enough runtime, the process will optimize the given objective function. SSMC numerically approximates this substochastic process, and so aims to optimize the objective function.</p>
+<p>Substochastic Monte Carlo (SSMC) [4,5] is a classical process based on the quantum adiabatic optimization algorithm [2,3]. Given an objective function and a continuous-time Markov chain, one forms a substochastic process whose dynamics is governed by the Markov chain, and stopping time by the objective function. The dynamics of this process, conditioned on not having stopped, stay close to the adiabatic evolution, given a sufficiently long runtime. So, with long enough runtime, the process will optimize the given objective function. SSMC numerically approximates this substochastic process, and so aims to optimize the objective function.</p>
 
 <p>SSMC combines Markov chain dynamics with a birth-death process. A user-defined schedule determines the relative strengths of the Markov chain and birth-death process induced by the objective function. Typically Markov chain dynamics initially dominates the algorithm, yielding to the birth-death process at the end. SSMC simulates this with a population where each walker can step, stay, die or spawn a new walker with probabilities governed by the schedule. Specifically, the Markov chain governs the probability of stepping or staying, while the likelihood of a walker dying or spawning is obtained from the objective function.</p>
 
-<p>The stopping time of a substochastic process induces a death process on the walkers. Conditioning on not having stopped renormalizes the population size, which produces a birth process. Walkers with an relatively unfavorable objective value are more likely to die, while those with better values are more likely to spawn. This is reminiscent of the Go-With-The-Winners heuristic of Aldous and Vazirani (FOCS 1994).</p>
+<p>The stopping time of a substochastic process induces a death process on the walkers. Conditioning on not having stopped renormalizes the population size, which produces a birth process. Walkers with an relatively unfavorable objective value are more likely to die, while those with better values are more likely to spawn. This is reminiscent of the Go-With-The-Winners heuristic of Aldous and Vazirani [1].</p>
 
-<p>The code in this repository is SSMC tailored to MAX-SAT problems. The Markov chain dynamics is restricted to the standard walk on the hypercube graph (uniform bit-flips). The objective function is the (weighted) number of unsatisfied clauses in a SAT problem. </p>
+<p>The code in this repository is SSMC tailored to MAX-SAT problems. The Markov chain dynamics is restricted to the standard walk on the hypercube graph (uniform bit-flips). The objective function is the (weighted) number of unsatisfied clauses in a SAT problem. This was submitted as an incomplete solver to Max-SAT 2016 [6].</p>
 
 <p><em>SSMC was supported in part by Booz Allen Hamilton, NIST, and QuICS.</em></p>
 
 <hr>
 
-<blockquote>
+<ol>
+<li>Aldous and Vazirani, <em>"Go with the winners" algorithms</em>, FOCS (1994), 492–501.</li>
+<li>Farhi, Goldstone, Gutmann, and Sipser, <em>Quantum computation by adiabatic evolution</em>, arXiv:quant-ph/0001106 (2000).</li>
+<li>Farhi, Goldstone, and Gutmann.  <em>Quantum adiabatic evolution algorithms versus simulated annealing</em>, arXiv:quant-ph/0201031 (2002).</li>
+<li>Jarret, Jordan, and Lackey, <em>Adiabatic optimization versus diffusion Monte Carlo</em>, to appear.</li>
+<li>Jarret, Jordan, and Lackey, <em>On a classical process for simulating stoquastic adiabatic evolution</em>, in preparation.</li>
+<li>Max-SAT 2016, Eleventh Max-SAT Evaluation. <a href="http://maxsat.ia.udl.cat">http://maxsat.ia.udl.cat</a>.</li>
+</ol>
+
+<hr>
+
 <p>Michael Jarret, Stephen Jordan, and Brad Lackey<br>
 <a href="http://quics.umd.edu/">Joint Center for Quantum Information and Computer Science</a><br>
 <a href="http://umd.edu/">University of Maryland, College Park</a><br></p>
-</blockquote>
 
 <p><img src="http://quics.umd.edu/sites/quics.umd.edu/themes/quics/logo.png" width="300px" align="right"></p>
       </section>
