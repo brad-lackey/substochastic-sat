@@ -9,6 +9,7 @@
 #include <time.h>
 #include <math.h>
 #include <string.h>
+#include <unistd.h>
 #include "macros.h"
 #include "bitstring.h"
 #include "sat.h"
@@ -59,8 +60,8 @@ int main(int argc, char **argv){
   }
   
   end = clock();
-//  time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
-//  printf("c Problem loaded: %f seconds\n", time_spent);
+  time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
+  printf("c Problem loaded: %f seconds\n", time_spent);
 
   if ( (err = initBitstring(&solution)) ){
     fprintf(stderr, "Could not initialize answerspace.\n");
@@ -75,8 +76,8 @@ int main(int argc, char **argv){
     fflush(stdout);
     printBits(stdout, pop->winner);
     fflush(stdout);
-//       time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
-//       printf("c Walltime: %f seconds, 0 loops\n", time_spent);
+    time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
+    printf("c Walltime: %f seconds, 0 loops\n", time_spent);
   }
   fflush(stdout);
   min = pop->winner->potential;
@@ -114,7 +115,7 @@ int main(int argc, char **argv){
         local_min = pop->winner->potential;
         if ( local_min < topweight ) {
           printf("o %ld\n", local_min);
-// printf("c Walltime: %f seconds, %d loops\n", time_spent, try);
+          printf("c Walltime: %f seconds, %d loop(s)\n", time_spent, try);
           fflush(stdout);
         }
         if (local_min <= optimal) {
@@ -137,6 +138,7 @@ int main(int argc, char **argv){
         fflush(stdout);
       }
       if (min <= optimal) {
+        sleep(1);
         return 0;
       }
     }
@@ -213,16 +215,16 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   
   setBitLength(sat->num_vars);
   
-//  printf("c Bits: %d\n", nbts);
-//  printf("c Clauses (after tautology removal): %d\n", sat->num_clauses);
-//  printf("c Problem type: %d\n", problem_type);
+  printf("c Bits: %d\n", nbts);
+  printf("c Clauses (after tautology removal): %d\n", sat->num_clauses);
+  printf("c Problem type: %d\n", problem_type);
   
   if ( problem_type == UNKNOWN ) {
     weight = sat->total_weight/5000.0;
     end_weight = 0.01;
-    runtime = sat->num_vars*sat->num_vars;
-    runstep = runtime/2.0;
-    popsize = 16;
+    runtime = sat->num_vars*sat->num_vars/100;
+    runstep = 2*runtime;
+    popsize = 1024;
     if ( NUM_VARIABLE_WORDS*vlen*tlen*sizeof(word_t) + NUM_CLAUSE_WORDS*clen*sizeof(int) < (1<<30) )
       runmode = 2;
     else
