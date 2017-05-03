@@ -14,6 +14,7 @@
 #include "bitstring.h"
 #include "sat.h"
 #include "population.h"
+#include "LUT.h"
 
 //On machines with very old versions of glibc (e.g. the Raritan cluster)
 //we need to define gnu_source in order to avoid warnings about implicit
@@ -34,7 +35,7 @@ static potential_t optimal;
 
 
 void update(double a, double b, double mean, Population P, int parity);
-int parseCommand(int argc, char **argv, Population *Pptr);
+int parseCommand(int argc, char **argv, Population *Pptr, LUT *tbl);
 
 
 int main(int argc, char **argv){
@@ -46,6 +47,7 @@ int main(int argc, char **argv){
   Bitstring solution;   //the corresponding bitstring
   clock_t beg, end;     //for code timing
   double time_spent;    //for code timing
+  LUT lut;
   
 #if TRACK_GLOBAL_BIASES
   int i;
@@ -55,7 +57,7 @@ int main(int argc, char **argv){
   
   beg = clock();
   
-  if ( (err = parseCommand(argc, argv, &pop)) ){
+  if ( (err = parseCommand(argc, argv, &pop, &lut)) ){
     return err;
   }
   
@@ -180,15 +182,15 @@ int main(int argc, char **argv){
 }
 
 
-int parseCommand(int argc, char **argv, Population *Pptr){
+int parseCommand(int argc, char **argv, Population *Pptr, LUT *tbl) {
   SAT sat;
   int seed;
   FILE *fp;
   Population pop;
   
-  if ( argc < 2 || argc > 4 ) {
-    fprintf(stderr, "Usage: %s <instance.cnf> \n",argv[0]);
-    fprintf(stderr, "Usage: %s <instance.cnf> [<target optimum> [<seed>]]\n",argv[0]);
+  if ( argc < 3 || argc > 5 ) {
+    fprintf(stderr, "Usage: %s <LUT.txt> <instance.cnf> \n",argv[0]);
+    fprintf(stderr, "Usage: %s <LUT.txt> <instance.cnf> [<target optimum> [<seed>]]\n",argv[0]);
     return 2;
   }
   
@@ -199,15 +201,29 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   printf("c Joint Center for Quantum Information and Computer Science\n");
   printf("c University of Maryland, College Park.\n");
   printf("c ----------------------------------------------------------\n");
-  printf("c Input: %s\n", argv[1]);
-  
+  printf("c LUT: %s\n", argv[1]);
+  printf("c Input: %s\n", argv[2]);
+
   if ( (fp = fopen(argv[1], "r")) == NULL ){
     fprintf(stderr,"Could not open file %s\n",argv[1]);
     return IO_ERROR;
   }
+
+  // Create LUT here
+  if ( ( initLUT(fp, tbl)) ){
+      fprintf(stderr,"Error reading in LUT file %s\n",argv[1]);
+      return IO_ERROR;
+  }
+
+  fclose(fp);
+
+  if ( (fp = fopen(argv[2], "r")) == NULL ){
+    fprintf(stderr,"Could not open file %s\n",argv[2]);
+    return IO_ERROR;
+  }
   
   if ( loadDIMACSFile(fp,&sat) ){
-    fprintf(stderr,"Error reading in DIMACS SAT file %s\n",argv[1]);
+    fprintf(stderr,"Error reading in DIMACS SAT file %s\n",argv[2]);
     return IO_ERROR;
   }
   
@@ -316,12 +332,12 @@ int parseCommand(int argc, char **argv, Population *Pptr){
   }
   
   
-  if ( argc >= 3 ) {
+  if ( argc >= 4 ) {
     
-    optimal = atoi(argv[2]);
+    optimal = atoi(argv[3]);
     
-    if ( argc == 4 )
-      seed = atoi(argv[3]);
+    if ( argc == 5 )
+      seed = atoi(argv[4]);
     else
       seed = time(0);
 
