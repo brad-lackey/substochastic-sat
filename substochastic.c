@@ -92,12 +92,18 @@ int main(int argc, char **argv){
     parity = 0;
     randomPopulation(pop,popsize);
     local_min = min;
+    int time_index = 0;
 
     while (t < runtime) {
       
       // The annealing schedule
-      a = weight*(1.0 - t/runtime); // Turned weight into percent -- Michael 3/30/16
-      b = (t/runtime);
+      if(time_index < lut->nrows && t >= lut->times[time_index]){
+        a = lut->times[time_index];
+        b = 1-a;
+        time_index++;
+      }
+//      a = weight*(1.0 - t/runtime); // Turned weight into percent -- Michael 3/30/16
+//      b = (t/runtime);
       
       mean = pop->avg_v + (pop->max_v - pop->min_v)*(popsize - pop->psize)/(2.0*popsize);
       
