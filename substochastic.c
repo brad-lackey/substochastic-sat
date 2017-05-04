@@ -35,7 +35,7 @@ static potential_t optimal;
 
 
 void update(double a, double b, double mean, Population P, int parity);
-int parseCommand(int argc, char **argv, Population *Pptr, LUT *tbl);
+int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut);
 
 
 int main(int argc, char **argv){
@@ -182,7 +182,7 @@ int main(int argc, char **argv){
 }
 
 
-int parseCommand(int argc, char **argv, Population *Pptr, LUT *tbl) {
+int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
   SAT sat;
   int seed;
   FILE *fp;
@@ -210,7 +210,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *tbl) {
   }
 
   // Create LUT here
-  if ( ( initLUT(fp, tbl)) ){
+  if ( ( initLUT(fp, lut)) ){
       fprintf(stderr,"Error reading in LUT file %s\n",argv[1]);
       return IO_ERROR;
   }

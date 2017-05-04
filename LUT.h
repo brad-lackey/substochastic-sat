@@ -8,6 +8,7 @@
 #define LUT_h
 
 #include <stdio.h>
+#include <stdlib.h>
 
 /// The underlying type for a LUT.
 /**
@@ -17,12 +18,13 @@ struct lut;
 typedef struct lut * LUT;
 
 struct lut {
-    int *cols;     ///< Array for column values.
-    int **rows;   ///< Array for row values.
+    int nrows;  ///< Number of rows.
+    unsigned int *times;   ///< Array of times.
+    double *vals;    ///< Array of values.
 };
 
 // Memory management routines.
-int initLUT(FILE *fp, LUT *tbl);  ///< Create a population from its SAT instance.
-void freeLUT(LUT *tbl);                    ///< Deallocation routine for a LUT.
+int initLUT(FILE *fp, LUT *lut);  ///< Create a population from its SAT instance.
+void freeLUT(LUT *lut);                    ///< Deallocation routine for a LUT.
 
 #endif //LUT_h
