@@ -98,7 +98,7 @@ int main(int argc, char **argv){
       
       // The annealing schedule
       if(time_index < lut->nrows && t >= lut->times[time_index]){
-        a = lut->times[time_index];
+        a = lut->vals[time_index];
         b = 1-a;
         time_index++;
       }
