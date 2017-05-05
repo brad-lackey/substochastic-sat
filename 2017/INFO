@@ -1,0 +1,3 @@
+Substochastic Monte Carlo (SSMC) is a classical algorithm that utilizes time-varied substochastic birth-death chains to solve optimization problems. By slowly varying a chain with some known initial quasi-stationary distribution to one with an unknown QSD, SSMC can often remains close to the instantaneous QSD throughout the entire variation. By choosing a final chain which encodes some optimization problem, if this process succeeds it naturally produces the optimum. This technique is a classical analog of and was inspired by the quantum adiabatic optimization algorithm. 
+
+SSMC was developed by Michael Jarret, Stephen Jordan, and Brad Lackey and supported in part by Booz Allen Hamilton, NIST, and QuICS.
