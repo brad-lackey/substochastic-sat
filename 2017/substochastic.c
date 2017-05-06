@@ -93,15 +93,11 @@ int main(int argc, char **argv){
     randomPopulation(pop,popsize);
     local_min = min;
     int time_index = 0;
+    a = lut->vals[0];
+    b = 1-a;
 
     while (t < runtime) {
-      
-      // The annealing schedule
-      if(time_index < lut->nrows && t >= lut->times[time_index]){
-        a = lut->vals[time_index];
-        b = 1-a;
-        time_index++;
-      }
+
 //      a = weight*(1.0 - t/runtime); // Turned weight into percent -- Michael 3/30/16
 //      b = (t/runtime);
       
@@ -114,7 +110,7 @@ int main(int argc, char **argv){
       if (t + dt > runtime)
         dt = runtime - t;
       
-      update(a*dt, b*dt, mean, pop, parity);
+      update(a, b, mean, pop, parity);
       
       end = clock();
       time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
@@ -135,6 +131,13 @@ int main(int argc, char **argv){
 
       t += dt;
       parity ^= 1;
+
+      // The annealing schedule
+      if(time_index+1 < lut->nrows && t >= lut->times[time_index]){
+        a = lut->vals[++time_index];
+        b = 1-a;
+        printf("%d: %d, %lf\n", time_index, lut->times[time_index], lut->vals[time_index]);
+      }
       
     }
     
