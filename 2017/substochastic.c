@@ -92,53 +92,48 @@ int main(int argc, char **argv){
     parity = 0;
     randomPopulation(pop,popsize);
     local_min = min;
-    int time_index = 0;
-    a = lut->vals[0];
-    b = 1-a;
 
-    while (t < runtime) {
+    for(int time_index=0; time_index < lut->nrows; time_index++) {
+      a = lut->vals[time_index];
+      b = 1 - a;
+
+      while (t < lut->times[time_index]) {
 
 //      a = weight*(1.0 - t/runtime); // Turned weight into percent -- Michael 3/30/16
 //      b = (t/runtime);
-      
-      mean = pop->avg_v + (pop->max_v - pop->min_v)*(popsize - pop->psize)/(2.0*popsize);
-      
-      if ( (pop->max_v - mean) > (mean - pop->min_v) )
-        dt = 0.9/(a + b*(pop->max_v - mean));
-      else
-        dt = 0.9/(a + b*(mean - pop->min_v));
-      if (t + dt > runtime)
-        dt = runtime - t;
-      
-      update(a, b, mean, pop, parity);
-      
-      end = clock();
-      time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
-      
-      if ( pop->winner->potential < local_min ) {
-        local_min = pop->winner->potential;
-        if ( local_min < topweight ) {
-          printf("o %ld\n", local_min);
-          printf("c Walltime: %f seconds, %d loop(s)\n", time_spent, try);
-          fflush(stdout);
+
+        mean = pop->avg_v + (pop->max_v - pop->min_v) * (popsize - pop->psize) / (2.0 * popsize);
+
+        if ((pop->max_v - mean) > (mean - pop->min_v))
+          dt = 0.9 / (a + b * (pop->max_v - mean));
+        else
+          dt = 0.9 / (a + b * (mean - pop->min_v));
+        if (t + dt > runtime)
+          dt = runtime - t;
+
+        update(a, b, mean, pop, parity);
+
+        end = clock();
+        time_spent = (double) (end - beg) / CLOCKS_PER_SEC;
+
+        if (pop->winner->potential < local_min) {
+          local_min = pop->winner->potential;
+          if (local_min < topweight) {
+            printf("o %ld\n", local_min);
+            printf("c Walltime: %f seconds, %d loop(s)\n", time_spent, try);
+            fflush(stdout);
+          }
+          if (local_min <= optimal) {
+            break;
+          }
         }
-        if (local_min <= optimal) {
+        if (time_spent > 290)
           break;
-        }
-      }
-      if ( time_spent > 290 )
-        break;
 
-      t += dt;
-      parity ^= 1;
-
-      // The annealing schedule
-      if(time_index+1 < lut->nrows && t >= lut->times[time_index]){
-        t = lut->times[time_index];
-        a = lut->vals[++time_index];
-        b = 1-a;
+        t += dt;
+        parity ^= 1;
       }
-      
+      t = lut->times[time_index]; // not sure whether this is the correct end of the loop.
     }
     
     if ( local_min < min ) {
