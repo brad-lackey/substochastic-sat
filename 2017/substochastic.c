@@ -134,9 +134,9 @@ int main(int argc, char **argv){
 
       // The annealing schedule
       if(time_index+1 < lut->nrows && t >= lut->times[time_index]){
+        t = lut->times[time_index];
         a = lut->vals[++time_index];
         b = 1-a;
-        printf("%d: %d, %lf\n", time_index, lut->times[time_index], lut->vals[time_index]);
       }
       
     }
