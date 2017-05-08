@@ -87,8 +87,6 @@ int main(int argc, char **argv){
   
   try = 1;
   while (1) {
-    
-    t = 0.0;
     parity = 0;
     randomPopulation(pop,popsize);
     local_min = min;
@@ -97,6 +95,9 @@ int main(int argc, char **argv){
       a = lut->vals[time_index];
       b = 1 - a;
 
+      //printf("%u: %u, %lf\n", time_index, lut->times[time_index], lut->vals[time_index]);
+
+      t = 0;
       while (t < lut->times[time_index]) {
 
 //      a = weight*(1.0 - t/runtime); // Turned weight into percent -- Michael 3/30/16
@@ -133,7 +134,6 @@ int main(int argc, char **argv){
         t += dt;
         parity ^= 1;
       }
-      t = lut->times[time_index]; // not sure whether this is the correct end of the loop.
     }
     
     if ( local_min < min ) {
