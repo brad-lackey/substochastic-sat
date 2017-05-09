@@ -200,10 +200,12 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
   
   printf("c ------------------------------------------------------\n");
   printf("c ----------------------------------------------------------\n");
-  printf("c Substochastic Monte Carlo, version 1.0, 2016\n");
-  printf("c Michael Jarret, Stephen Jordan, and Brad Lackey\n");
-  printf("c Joint Center for Quantum Information and Computer Science\n");
-  printf("c University of Maryland, College Park.\n");
+  printf("c Substochastic Monte Carlo, version 1.1, 2017\n");
+  printf("c Michael Jarret[1], Stephen Jordan[2], Brad Lackey[2], and Bryan Luu[3]\n");
+  printf("c [1] Perimeter Institute for Theoretical Physics\n");
+  printf("c [2] Joint Center for Quantum Information and Computer Science\n");
+  printf("c       University of Maryland, College Park.\n");
+  printf("c [3] University of British Columbia\n");
   printf("c ----------------------------------------------------------\n");
   printf("c LUT: %s\n", argv[1]);
   printf("c Input: %s\n", argv[2]);
