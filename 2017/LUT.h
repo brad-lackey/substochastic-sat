@@ -19,7 +19,7 @@ typedef struct lut * LUT;
 
 struct lut {
     int nrows;  ///< Number of rows.
-    unsigned int *times;   ///< Array of times.
+    double *times;   ///< Array of times.
     double *vals;    ///< Array of values.
 };
 

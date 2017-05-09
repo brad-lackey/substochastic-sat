@@ -95,7 +95,7 @@ int main(int argc, char **argv){
       a = lut->vals[time_index];
       b = 1 - a;
 
-      //printf("%u: %u, %lf\n", time_index, lut->times[time_index], lut->vals[time_index]);
+//      printf("%u: %lf, %lf\n", time_index, lut->times[time_index], lut->vals[time_index]);
 
       t = 0;
       while (t < lut->times[time_index]) {

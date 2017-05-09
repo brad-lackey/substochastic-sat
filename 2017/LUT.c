@@ -34,7 +34,7 @@ int initLUT(FILE *fp, LUT *lut){
 
     _lut->nrows = nrows;
 
-    if ( (_lut->times = (unsigned int*) malloc(nrows * sizeof(unsigned int))) == NULL) {
+    if ( (_lut->times = (double*) malloc(nrows * sizeof(double))) == NULL) {
         *lut = NULL;
         return MEMORY_ERROR;
     }
@@ -45,13 +45,13 @@ int initLUT(FILE *fp, LUT *lut){
         return MEMORY_ERROR;
     }
 
-    unsigned int time;
+    double time;
     double val;
     int i=0;
 
     while( (linelen = getline(&line, &linecap, fp)) > 0)
     {
-        if( sscanf(line, "%u\t%lf", &time, &val) < 2 ){
+        if( sscanf(line, "%lf\t%lf", &time, &val) < 2 ){
             freeLUT(&_lut);
             *lut = NULL;
             return IO_ERROR;
@@ -60,6 +60,11 @@ int initLUT(FILE *fp, LUT *lut){
         _lut->times[i] = time;
         _lut->vals[i] = val;
         i++;
+    }
+
+    if(i != nrows){
+        freeLUT(&_lut);
+        return IO_ERROR;
     }
 
     *lut = _lut;
