@@ -59,6 +59,7 @@ int initLUT(FILE *fp, LUT *lut){
 
         _lut->times[i] = time;
         _lut->vals[i] = val;
+        _lut->total_time += time;
         i++;
     }
 

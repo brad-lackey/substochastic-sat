@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#!/usr/bin/python
 import sys
 
 # Make a tuple out of a string

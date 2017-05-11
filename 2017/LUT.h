@@ -19,6 +19,7 @@ typedef struct lut * LUT;
 
 struct lut {
     int nrows;  ///< Number of rows.
+    double total_time;
     double *times;   ///< Array of times.
     double *vals;    ///< Array of values.
 };
