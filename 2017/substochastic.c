@@ -94,11 +94,12 @@ int main(int argc, char **argv){
     for(int time_index=0; time_index < lut->nrows; time_index++) {
       a = lut->vals[time_index];
       b = 1 - a;
+      a *= weight;
 
 //      printf("%u: %lf, %lf\n", time_index, lut->times[time_index], lut->vals[time_index]);
 
       t = 0;
-      while (t < lut->times[time_index]) {
+      while (t < lut->times[time_index]*runtime/lut->nrows) {
 
 //      a = weight*(1.0 - t/runtime); // Turned weight into percent -- Michael 3/30/16
 //      b = (t/runtime);
@@ -109,10 +110,10 @@ int main(int argc, char **argv){
           dt = 0.9 / (a + b * (pop->max_v - mean));
         else
           dt = 0.9 / (a + b * (mean - pop->min_v));
-        if (t + dt > runtime)
-          dt = runtime - t;
+//        if (t + dt > runtime)
+//          dt = runtime - t;
 
-        update(a, b, mean, pop, parity);
+        update(a*dt, b*dt, mean, pop, parity);
 
         end = clock();
         time_spent = (double) (end - beg) / CLOCKS_PER_SEC;

@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-$queue_size = 6;
+$queue_size = 20;
 
 (scalar(@ARGV) == 4) or (scalar(@ARGV) == 6) or die "Usage: ./testrun.pl command <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n";
 
@@ -69,7 +69,7 @@ while ( scalar(@stack) > 0 ){
         my @a = split(/\s+/,$job);
         open(OUT, ">>$tag.out") || die;
         flock(OUT, 2) || die;
-        print OUT "$a[1] $opt $time $loops\n";
+        print OUT "$a[-3] $opt $time $loops\n";
         close(OUT);
         exit(0);
     }
