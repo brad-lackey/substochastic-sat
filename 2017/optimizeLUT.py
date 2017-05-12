@@ -28,8 +28,8 @@ def tryLUT(tag, filename, trials, dT, A, weight, runtime):
     if len(dT) != len(A):
         raise Exception("Vectors dT and A are not the same length!")
 
-    lut = tag + ".LUT.txt"
     bins = len(dT)
+    lut = tag + ".LUT." + str(bins) + ".txt"
 
     makeLUT(lut, bins, dT, A)
 

@@ -48,7 +48,8 @@ int initLUT(FILE *fp, LUT *lut){
     double time;
     double val;
     int i=0;
-
+    _lut->total_time = 0;
+    
     while( (linelen = getline(&line, &linecap, fp)) > 0)
     {
         if( sscanf(line, "%lf\t%lf", &time, &val) < 2 ){
