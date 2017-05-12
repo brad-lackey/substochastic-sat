@@ -3,6 +3,7 @@ import sys
 from createLUT import makeLUT
 from subprocess import check_call
 import numpy as np
+from scipy.optimize import minimize
 
 """Returns the percentage of hits and avg runtime as a tuple"""
 def parseTXT(txtfile):
@@ -79,8 +80,14 @@ def main():
     dT = np.ones(bins)
     A = np.linspace(1, 0, bins)
 
-    # Just a random test
-    print(tryLUT(tag, filename, trials, dT, A, weight, runtime))
+    # Minimize A
+    bnds = tuple((0,1) for x in A) # A values lie between (0,1)
+    res = minimize(lambda x, a1, a2, a3, a4, a5, a6: tryLUT(a1, a2, a3, a4, x, a5, a6), A,
+                   (tag, filename, trials, dT, weight, runtime), method='L-BFGS-B', bounds=bnds)
+
+    # Store the best A
+    A = res.x
+    makeLUT(tag + ".OPTIMAL.txt", bins, dT, A)
 
     return 0
 
