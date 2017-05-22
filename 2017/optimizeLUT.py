@@ -3,13 +3,32 @@ import sys
 from createLUT import makeLUT
 from subprocess import check_call
 import numpy as np
-from scipy.optimize import basinhopping
+from scipy.optimize import fminbound
 import matplotlib.pyplot as plt
 import smtplib
 
 num_iter = 0
 email = False
 verbose = False
+
+"""Returns the dT and A vectors from a LUT file as a tuple"""
+def parseLUT(lutfile):
+
+    with open(lutfile, 'r') as f:
+        line = f.readline()
+        bins = int(line)
+        dT = np.zeros(bins)
+        A = np.zeros(bins)
+        row = 0
+        while len(line) > 0:
+            line = f.readline()
+            if len(line) > 0:
+                dT[row], A[row] = line.rstrip('\n').split('\t')
+                row += 1
+        if row != bins:
+            raise Exception("Invalid LUT file format!")
+
+    return dT, A
 
 """Returns the percentage of hits and avg runtime as a tuple"""
 def parseTXT(txtfile):
@@ -31,7 +50,7 @@ def parseTXT(txtfile):
     return hit, t
 
 """Returns the avg time of a set of conf files using given LUT"""
-def tryLUT(tag, filename, trials, dT, A, weight, runtime, verbose):
+def tryLUT(tag, filename, trials, dT, A, weight, runtime):
     if len(dT) != len(A):
         raise Exception("Vectors dT and A are not the same length!")
 
@@ -103,69 +122,119 @@ def main():
         global verbose
         verbose = True
         args.remove('-v')
-    if len(args) == 5 or len(args) == 7:
-        filename = args[1]
-        bins = int(args[2])
-        trials = args[3]
-        tag = args[4]
+    if len(args) == 7 or len(args) == 9:
+        lutfile = args[1]
+        var = args[2]
+        datfile = args[3]
+        bins = int(args[4])
+        trials = args[5]
+        tag = args[6]
         weight = None
         runtime = None
 
-        if len(args) == 7:
-            weight = args[5]
-            runtime = args[6]
+        if len(args) == 9:
+            weight = args[7]
+            runtime = args[8]
 
     else:
-        print("Usage: ./optimizeLUT [-v] [-m] <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
+        print("Usage: ./optimizeLUT dT|A [-v] [-m] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
         return 1
 
     if verbose:
         # Turn on interactive plotting
         plt.ion()
 
-    # Guesses for dT and A
-    dT = np.ones(bins)
-    A = np.linspace(1, 0, bins)
+    # Load initial conditions for dT and A
+    dT, A = parseLUT(lutfile)
 
-    # Minimize A
-    bnds = tuple((0,1) for x in A)  # A values lie between (0,1)
-    f_A = lambda x, a1, a2, a3, a4, a5, a6, a7: tryLUT(a1, a2, a3, a4, x, a5, a6, a7)  # rearranging the arguments for A
+    # Minimize var
+    if var == 'dT':
+        f_A = lambda x1, i, x2, a1, a2, a3, a4, a5, a6: tryLUT(a1, a2, a3, np.insert(x2, i, x1), a4, a5, a6)  # rearranging the arguments for A
+    elif var == 'A':
+        f_A = lambda x1, i, x2, a1, a2, a3, a4, a5, a6: tryLUT(a1, a2, a3, a4, np.insert(x2, i, x1), a5, a6)  # rearranging the arguments for A
+    else:
+        raise Exception("Invalid variable argument! Must be \"dT\" or \"A\"")
 
-    def printf(x, f, accept):
+    def printf(f):
         if verbose:
-            print("#################### Found minimum: " + str(f) + " ####################")
+            print("#################### Found new minimum: " + str(f) + " ####################")
             global num_iter
             num_iter = 0
         if email:
-            msg = "Found minimum: " + str(f)
+            msg = "Found new minimum: " + str(f)
             sendEmail(msg)
 
-    res = basinhopping(f_A, A, stepsize=0.1, callback=printf,
-                    minimizer_kwargs={'method':'L-BFGS-B', 'options':{'eps':0.005, 'ftol':0.001, 'maxfun':bins*10}, 'bounds':bnds,
-                                      'args':(tag, filename, trials, dT, weight, runtime, verbose)})
+    # res = basinhopping(f_A, A, stepsize=0.1, callback=printf,
+    #                 minimizer_kwargs={'method':'TNC', 'options':{'eps':0.005, 'ftol':0.01}, 'bounds':bnds,
+    #                                   'args':(tag, filename, trials, dT, weight, runtime)})
 
-    # Store the best A
-    A = res.x
-    lut = tag + ".OPTIMAL.A.txt"
-    makeLUT(lut, bins, dT, A)
+    # Loop through each index of dT and minimize accordingly
+    N = 10
+    fmin = 1000
+    varmin = -1
+    for n in range(N):
+        fval = 0
+        for i in range(bins):
+            if var == "dT":
+                x0, fval, ierr, numfunc = fminbound(f_A, 0, 1, args=(i, np.delete(dT,i), tag, datfile, trials, A, weight, runtime),
+                      full_output=True, xtol=0.01)
+                dT[i] = x0
+            else:
+                x0, fval, ierr, numfunc = fminbound(f_A, 0, 1, args=(i, np.delete(A,i), tag, datfile, trials, dT, weight, runtime),
+                                                    full_output=True, xtol=0.01)
+                A[i] = x0
+
+            if fval < fmin:
+                fmin = fval
+
+                if var == "dT":
+                    varmin = dT.copy()
+                else:
+                    varmin = A.copy()
+
+                printf(fmin)
+
+                # Store the best var
+                lut = tag + ".OPTIMAL." + var + ".txt"
+                if var == "dT":
+                    makeLUT(lut, bins, varmin, A)
+                else:
+                    makeLUT(lut, bins, dT, varmin)
+
+                if verbose:
+                    plt.savefig(tag + ".OPTIMAL." + var + ".png")
+
+            if verbose:
+                print("---------- Found " + str(x0) + " at " + str(fval) + " after " + str(numfunc) + " iterations ----------")
+
 
     if verbose:
         # Print the best time
-        print("Best time: " + str(res.fun))
+        print("Best time: " + str(fmin))
 
         ax = plt.gca()
-        t = np.cumsum(dT)
+
+        if var == 'dT':
+            t = np.cumsum(varmin)
+        else:
+            t = np.cumsum(dT)
+
         t = t - np.ediff1d(t, to_begin=t[0])/2.0  # staggers the time so that it falls in between the bins
-        ax.plot(t, A)
-        ax.ylabel("A-Values")
-        ax.xlabel("Time")
-        ax.title("A vs. T")
-        ax.relim()
-        ax.autoscale_view()
+
+        if var == 'A':
+            plt.plot(t, varmin)
+        else:
+            plt.plot(t, A)
+
+        plt.ylabel("A-Values")
+        plt.xlabel("Time")
+        plt.title("A vs. T")
+        plt.relim()
+        plt.autoscale_view()
         plt.draw()
 
     if email:
-        msg = "Optimization finished!\nOptimal A: " + str(A) + "\nOptimum value: " + str(res.fun) + "\n"
+        msg = "Optimization finished!\nOptimal " + var + ": " + str(varmin) + "\nOptimum value: " + str(fmin) + "\n"
         sendEmail(msg)
 
 
