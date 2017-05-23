@@ -115,6 +115,38 @@ def sendEmail(msg):
     server.quit()
 
 
+def getABounds(bins, row, varvector):
+    if row == 0 or row == bins - 1:
+        if row == 0:
+            diff = BOUND_MULTIPLIER * abs(varvector[row + 1] - varvector[row])
+        else:
+            diff = BOUND_MULTIPLIER * abs(varvector[row - 1] - varvector[row])
+
+        if diff > BOUND_CAP:
+            diff = BOUND_CAP
+
+        lbound = varvector[row] - diff
+        ubound = varvector[row] + diff
+    else:
+        ldiff = BOUND_MULTIPLIER * abs(varvector[row] - varvector[row - 1])
+        rdiff = BOUND_MULTIPLIER * abs(varvector[row + 1] - varvector[row])
+
+        if ldiff > BOUND_CAP:
+            ldiff = BOUND_CAP
+        if rdiff > BOUND_CAP:
+            rdiff = BOUND_CAP
+
+        if varvector[row - 1] <= varvector[row + 1]:
+            lbound = varvector[row] - ldiff
+            ubound = varvector[row] + rdiff
+        else:
+            ubound = varvector[row] + ldiff
+            lbound = varvector[row] - rdiff
+    lbound = max(lbound, 0)
+    ubound = min(ubound, 1)
+    return lbound, ubound
+
+
 def main():
     args = sys.argv
     if '-m' in args:
@@ -139,7 +171,7 @@ def main():
             runtime = args[7]
 
     else:
-        print("Usage: ./optimizeLUT dT|A [-v] [-m] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
+        print("Usage: ./optimizeLUT dT|A|both [-v] [-m] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
         return 1
 
     if verbose:
@@ -151,19 +183,22 @@ def main():
 
     # Minimize var
     if var == 'dT':
-        f_A = lambda x1, i, x2, a1, a2, a3, a4, a5, a6: tryLUT(a1, a2, a3, np.insert(x2, i, x1), a4, a5, a6)  # rearranging the arguments for A
+        f = lambda x1, i, x2, a1, a2, a3, a4, a5, a6: tryLUT(a1, a2, a3, np.insert(x2, i, x1), a4, a5, a6)  # rearranging the arguments for dT
     elif var == 'A':
+        f = lambda x1, i, x2, a1, a2, a3, a4, a5, a6: tryLUT(a1, a2, a3, a4, np.insert(x2, i, x1), a5, a6)  # rearranging the arguments for A
+    elif var == 'both':
         f_A = lambda x1, i, x2, a1, a2, a3, a4, a5, a6: tryLUT(a1, a2, a3, a4, np.insert(x2, i, x1), a5, a6)  # rearranging the arguments for A
+        f_dT = lambda x1, i, x2, a1, a2, a3, a4, a5, a6: tryLUT(a1, a2, a3, np.insert(x2, i, x1), a4, a5, a6)  # rearranging the arguments for dT
     else:
-        raise Exception("Invalid variable argument! Must be \"dT\" or \"A\"")
+        raise Exception("Invalid variable argument! Must be \"dT\", \"A\" or \"both\"")
 
-    def printf(f):
+    def printf(fval):
         if verbose:
-            print("#################### Found new minimum: " + str(f) + " ####################")
+            print("#################### Found new minimum: " + str(fval) + " ####################")
             global num_iter
             num_iter = 0
         if email:
-            msg = "Found new minimum: " + str(f)
+            msg = "Found new minimum: " + str(fval)
             sendEmail(msg)
 
     # Loop through each index of dT and minimize accordingly
@@ -177,70 +212,99 @@ def main():
         fval = 0
         np.random.shuffle(indices)  # shuffles the indices array for random choice of index to optimize
         for row in indices:
-            if var == "dT":
-                varvector, othervector = dT, A
 
-                lbound = 0.1
-                ubound = 2.0
+            if var == "both":
+                for n in range(3):
+                    # Optimize A first
+                    varvector, othervector = A, dT
+
+                    lbound, ubound = getABounds(bins, row, varvector)
+
+                    x0, fval, ierr, numfunc = fminbound(f_A, lbound, ubound, args=(row, np.delete(varvector,row), tag, datfile, trials, othervector, weight, runtime),
+                                                        full_output=True, xtol=0.01)
+                    varvector[row] = x0
+
+                    if fval < fmin:
+                        fmin = fval
+
+                        Amin, dTmin = A.copy(), dT.copy()
+
+                        printf(fmin)
+
+                        # Store the best var
+                        lut = tag + ".OPTIMAL." + var + ".txt"
+                        makeLUT(lut, bins, dTmin, Amin)
+
+                        if verbose:
+                            plt.savefig(tag + ".OPTIMAL." + var + ".png")
+
+                    if verbose:
+                        print("---------- Found A[{0}]={1}".format(row, x0) + " at time " + str(fval) + " after " + str(numfunc) + " tries, {0}/{1} iterations ----------".format(i+1, N))
+
+                    # Optimize dT next
+                    varvector, othervector = dT, A
+
+                    lbound, ubound = 0.1, 2.0
+
+                    x0, fval, ierr, numfunc = fminbound(f_dT, lbound, ubound, args=(row, np.delete(varvector,row), tag, datfile, trials, othervector, weight, runtime),
+                                                        full_output=True, xtol=0.01)
+                    varvector[row] = x0
+
+                    if fval < fmin:
+                        fmin = fval
+
+                        Amin, dTmin = A.copy(), dT.copy()
+
+                        printf(fmin)
+
+                        # Store the best var
+                        lut = tag + ".OPTIMAL." + var + ".txt"
+                        makeLUT(lut, bins, dTmin, Amin)
+
+                        if verbose:
+                            plt.savefig(tag + ".OPTIMAL." + var + ".png")
+
+                    if verbose:
+                        print("---------- Found dT[{0}]={1}".format(row, x0) + " at time " + str(fval) + " after " + str(numfunc) + " tries, {0}/{1} iterations ----------".format(i+1, N))
+
+            # if var == dT or A
             else:
-                varvector, othervector = A, dT
-
-                if row == 0 or row == bins-1:
-                    if row == 0:
-                        diff = BOUND_MULTIPLIER*abs(varvector[row+1] - varvector[row])
-                    else:
-                        diff = BOUND_MULTIPLIER*abs(varvector[row-1] - varvector[row])
-
-                    if diff > BOUND_CAP:
-                        diff = BOUND_CAP
-
-                    lbound = varvector[row] - diff
-                    ubound = varvector[row] + diff
-                else:
-                    ldiff = BOUND_MULTIPLIER*abs(varvector[row] - varvector[row-1])
-                    rdiff = BOUND_MULTIPLIER*abs(varvector[row+1] - varvector[row])
-
-                    if ldiff > BOUND_CAP:
-                        ldiff = BOUND_CAP
-                    if rdiff > BOUND_CAP:
-                        rdiff = BOUND_CAP
-
-                    if varvector[row-1] <= varvector[row+1]:
-                        lbound = varvector[row] - ldiff
-                        ubound = varvector[row] + rdiff
-                    else:
-                        ubound = varvector[row] + ldiff
-                        lbound = varvector[row] - rdiff
-
-                lbound = max(lbound, 0)
-                ubound = min(ubound, 1)
-
-            x0, fval, ierr, numfunc = fminbound(f_A, lbound, ubound, args=(row, np.delete(varvector,row), tag, datfile, trials, othervector, weight, runtime),
-                                                full_output=True, xtol=0.01)
-            varvector[row] = x0
-
-            if fval < fmin:
-                fmin = fval
 
                 if var == "dT":
-                    varmin = dT.copy()
-                else:
-                    varmin = A.copy()
+                    varvector, othervector = dT, A
 
-                printf(fmin)
+                    lbound, ubound = 0.1, 2.0
+                elif var == "A":
+                    varvector, othervector = A, dT
 
-                # Store the best var
-                lut = tag + ".OPTIMAL." + var + ".txt"
-                if var == "dT":
-                    makeLUT(lut, bins, varmin, A)
-                else:
-                    makeLUT(lut, bins, dT, varmin)
+                    lbound, ubound = getABounds(bins, row, varvector)
+
+                x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(row, np.delete(varvector,row), tag, datfile, trials, othervector, weight, runtime),
+                                                    full_output=True, xtol=0.01)
+                varvector[row] = x0
+
+                if fval < fmin:
+                    fmin = fval
+
+                    if var == "dT":
+                        varmin = dT.copy()
+                    else:
+                        varmin = A.copy()
+
+                    printf(fmin)
+
+                    # Store the best var
+                    lut = tag + ".OPTIMAL." + var + ".txt"
+                    if var == "dT":
+                        makeLUT(lut, bins, varmin, A)
+                    else:
+                        makeLUT(lut, bins, dT, varmin)
+
+                    if verbose:
+                        plt.savefig(tag + ".OPTIMAL." + var + ".png")
 
                 if verbose:
-                    plt.savefig(tag + ".OPTIMAL." + var + ".png")
-
-            if verbose:
-                print("---------- Found {0}[{1}]={2}".format(var, row, x0) + " at time " + str(fval) + " after " + str(numfunc) + " tries, {0}/{1} iterations ----------".format(i+1, N))
+                    print("---------- Found {0}[{1}]={2}".format(var, row, x0) + " at time " + str(fval) + " after " + str(numfunc) + " tries, {0}/{1} iterations ----------".format(i+1, N))
 
 
     if verbose:
@@ -251,6 +315,8 @@ def main():
 
         if var == 'dT':
             t = np.cumsum(varmin)
+        elif var == 'both':
+            t = np.cumsum(dTmin)
         else:
             t = np.cumsum(dT)
 
@@ -258,6 +324,8 @@ def main():
 
         if var == 'A':
             plt.plot(t, varmin)
+        elif var == 'both':
+            plt.plot(t, Amin)
         else:
             plt.plot(t, A)
 
@@ -269,11 +337,15 @@ def main():
         plt.draw()
 
     if email:
-        msg = "Optimization finished!\nOptimal " + var + ": " + str(varmin) + "\nOptimum value: " + str(fmin) + "\n"
+        if var == "both":
+            msg = "Optimization finished!\nOptimal dT: {0}\nOptimal A: {1}\nOptimum value: {2}\n".format(dTmin, Amin, fmin)
+        else:
+            msg = "Optimization finished!\nOptimal " + var + ": " + str(varmin) + "\nOptimum value: " + str(fmin) + "\n"
         sendEmail(msg)
 
 
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())
