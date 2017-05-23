@@ -332,8 +332,9 @@ def main():
         plt.ylabel("A-Values")
         plt.xlabel("Time")
         plt.title("A vs. T")
-        plt.relim()
-        plt.autoscale_view()
+        ax = plt.gca()
+        ax.relim()
+        ax.autoscale_view()
         plt.draw()
 
     if email:
