@@ -11,6 +11,9 @@ num_iter = 0
 email = False
 verbose = False
 
+BOUND_CAP = 0.1
+BOUND_MULTIPLIER = 1.1
+
 """Returns the dT and A vectors from a LUT file as a tuple"""
 def parseLUT(lutfile):
 
@@ -163,10 +166,6 @@ def main():
             msg = "Found new minimum: " + str(f)
             sendEmail(msg)
 
-    # res = basinhopping(f_A, A, stepsize=0.1, callback=printf,
-    #                 minimizer_kwargs={'method':'TNC', 'options':{'eps':0.005, 'ftol':0.01}, 'bounds':bnds,
-    #                                   'args':(tag, filename, trials, dT, weight, runtime)})
-
     # Loop through each index of dT and minimize accordingly
     N = 10  # number of optimization iterations
     fmin = 1000
@@ -179,13 +178,46 @@ def main():
         np.random.shuffle(indices)  # shuffles the indices array for random choice of index to optimize
         for row in indices:
             if var == "dT":
-                x0, fval, ierr, numfunc = fminbound(f_A, 0, 1, args=(row, np.delete(dT,row), tag, datfile, trials, A, weight, runtime),
-                                                    full_output=True, xtol=0.01)
-                dT[row] = x0
+                varvector, othervector = dT, A
+
+                lbound = 0.1
+                ubound = 2.0
             else:
-                x0, fval, ierr, numfunc = fminbound(f_A, 0, 1, args=(row, np.delete(A,row), tag, datfile, trials, dT, weight, runtime),
-                                                    full_output=True, xtol=0.01)
-                A[row] = x0
+                varvector, othervector = A, dT
+
+                if row == 0 or row == bins-1:
+                    if row == 0:
+                        diff = BOUND_MULTIPLIER*abs(varvector[row+1] - varvector[row])
+                    else:
+                        diff = BOUND_MULTIPLIER*abs(varvector[row-1] - varvector[row])
+
+                    if diff > BOUND_CAP:
+                        diff = BOUND_CAP
+
+                    lbound = varvector[row] - diff
+                    ubound = varvector[row] + diff
+                else:
+                    ldiff = BOUND_MULTIPLIER*abs(varvector[row] - varvector[row-1])
+                    rdiff = BOUND_MULTIPLIER*abs(varvector[row+1] - varvector[row])
+
+                    if ldiff > BOUND_CAP:
+                        ldiff = BOUND_CAP
+                    if rdiff > BOUND_CAP:
+                        rdiff = BOUND_CAP
+
+                    if varvector[row-1] <= varvector[row+1]:
+                        lbound = varvector[row] - ldiff
+                        ubound = varvector[row] + rdiff
+                    else:
+                        ubound = varvector[row] + ldiff
+                        lbound = varvector[row] - rdiff
+
+                lbound = max(lbound, 0)
+                ubound = min(ubound, 1)
+
+            x0, fval, ierr, numfunc = fminbound(f_A, lbound, ubound, args=(row, np.delete(varvector,row), tag, datfile, trials, othervector, weight, runtime),
+                                                full_output=True, xtol=0.01)
+            varvector[row] = x0
 
             if fval < fmin:
                 fmin = fval
