@@ -98,7 +98,7 @@ def tryLUT(tag, filename, trials, dT, A, weight, runtime):
         global num_iter
         num_iter += 1
 
-        print("# Iterations: " + str(num_iter))
+        print("# Tries: " + str(num_iter))
         print("Tried dT=" + str(dT) + ", A=" + str(A) + " with a time of " + str(avg_time))
 
     return avg_time
@@ -171,12 +171,16 @@ def main():
     N = 10  # number of optimization iterations
     fmin = 1000
     varmin = -1
+    indices = np.arange(bins)
+
+    # i -> iteration
     for i in range(N):
         fval = 0
-        for row in range(bins):
+        np.random.shuffle(indices)  # shuffles the indices array for random choice of index to optimize
+        for row in indices:
             if var == "dT":
                 x0, fval, ierr, numfunc = fminbound(f_A, 0, 1, args=(row, np.delete(dT,row), tag, datfile, trials, A, weight, runtime),
-                      full_output=True, xtol=0.01)
+                                                    full_output=True, xtol=0.01)
                 dT[row] = x0
             else:
                 x0, fval, ierr, numfunc = fminbound(f_A, 0, 1, args=(row, np.delete(A,row), tag, datfile, trials, dT, weight, runtime),
@@ -204,7 +208,7 @@ def main():
                     plt.savefig(tag + ".OPTIMAL." + var + ".png")
 
             if verbose:
-                print("---------- Found " + str(x0) + " at row " + str(row) + ", value " + str(fval) + " after " + str(numfunc) + " tries, {0}/{1} iterations ----------".format(i, N))
+                print("---------- Found {0}[{1}]={2}".format(var, row, x0) + " at time " + str(fval) + " after " + str(numfunc) + " tries, {0}/{1} iterations ----------".format(i+1, N))
 
 
     if verbose:
