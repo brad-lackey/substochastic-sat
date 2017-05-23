@@ -24,7 +24,7 @@ def main():
         filename = sys.argv[1]
     else:
         print("Enter Filename:")
-        filename = raw_input()
+        filename = raw_input().rstrip()
 
     if cmd_line:
         mode = int(sys.argv[2])

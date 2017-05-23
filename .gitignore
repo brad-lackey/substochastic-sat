@@ -36,3 +36,8 @@
 
 # Doxygen output
 doc/*
+
+# CLion/Pycharm folders
+.idea/
+CMakeLists.txt
+cmake-build-debug/

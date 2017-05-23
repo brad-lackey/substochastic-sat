@@ -28,7 +28,7 @@ def parseLUT(lutfile):
         if row != bins:
             raise Exception("Invalid LUT file format!")
 
-    return dT, A
+    return bins, dT, A
 
 """Returns the percentage of hits and avg runtime as a tuple"""
 def parseTXT(txtfile):
@@ -122,19 +122,18 @@ def main():
         global verbose
         verbose = True
         args.remove('-v')
-    if len(args) == 7 or len(args) == 9:
-        lutfile = args[1]
-        var = args[2]
+    if len(args) == 6 or len(args) == 8:
+        var = args[1]
+        lutfile = args[2]
         datfile = args[3]
-        bins = int(args[4])
-        trials = args[5]
-        tag = args[6]
+        trials = args[4]
+        tag = args[5]
         weight = None
         runtime = None
 
-        if len(args) == 9:
-            weight = args[7]
-            runtime = args[8]
+        if len(args) == 8:
+            weight = args[6]
+            runtime = args[7]
 
     else:
         print("Usage: ./optimizeLUT dT|A [-v] [-m] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
@@ -145,7 +144,7 @@ def main():
         plt.ion()
 
     # Load initial conditions for dT and A
-    dT, A = parseLUT(lutfile)
+    bins, dT, A = parseLUT(lutfile)
 
     # Minimize var
     if var == 'dT':
@@ -169,20 +168,20 @@ def main():
     #                                   'args':(tag, filename, trials, dT, weight, runtime)})
 
     # Loop through each index of dT and minimize accordingly
-    N = 10
+    N = 10  # number of optimization iterations
     fmin = 1000
     varmin = -1
-    for n in range(N):
+    for i in range(N):
         fval = 0
-        for i in range(bins):
+        for row in range(bins):
             if var == "dT":
-                x0, fval, ierr, numfunc = fminbound(f_A, 0, 1, args=(i, np.delete(dT,i), tag, datfile, trials, A, weight, runtime),
+                x0, fval, ierr, numfunc = fminbound(f_A, 0, 1, args=(row, np.delete(dT,row), tag, datfile, trials, A, weight, runtime),
                       full_output=True, xtol=0.01)
-                dT[i] = x0
+                dT[row] = x0
             else:
-                x0, fval, ierr, numfunc = fminbound(f_A, 0, 1, args=(i, np.delete(A,i), tag, datfile, trials, dT, weight, runtime),
+                x0, fval, ierr, numfunc = fminbound(f_A, 0, 1, args=(row, np.delete(A,row), tag, datfile, trials, dT, weight, runtime),
                                                     full_output=True, xtol=0.01)
-                A[i] = x0
+                A[row] = x0
 
             if fval < fmin:
                 fmin = fval
@@ -205,7 +204,7 @@ def main():
                     plt.savefig(tag + ".OPTIMAL." + var + ".png")
 
             if verbose:
-                print("---------- Found " + str(x0) + " at " + str(fval) + " after " + str(numfunc) + " iterations ----------")
+                print("---------- Found " + str(x0) + " at row " + str(row) + ", value " + str(fval) + " after " + str(numfunc) + " tries, {0}/{1} iterations ----------".format(i, N))
 
 
     if verbose:
