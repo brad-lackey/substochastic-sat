@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 from optimizeLUT import tryLUT, makeLUT, sendEmail
 import numpy as np
 from joblib import Parallel, delayed
