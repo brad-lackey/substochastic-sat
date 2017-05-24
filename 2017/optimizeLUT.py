@@ -222,10 +222,10 @@ def main():
 
                     x0, fval, ierr, numfunc = fminbound(f_A, lbound, ubound, args=(row, np.delete(varvector,row), tag, datfile, trials, othervector, weight, runtime),
                                                         full_output=True, xtol=0.01)
+                    varvector[row] = x0
 
                     if fval < fmin:
                         fmin = fval
-                        varvector[row] = x0
 
                         Amin, dTmin = A.copy(), dT.copy()
 
@@ -248,10 +248,10 @@ def main():
 
                     x0, fval, ierr, numfunc = fminbound(f_dT, lbound, ubound, args=(row, np.delete(varvector,row), tag, datfile, trials, othervector, weight, runtime),
                                                         full_output=True, xtol=0.01)
+                    varvector[row] = x0
 
                     if fval < fmin:
                         fmin = fval
-                        varvector[row] = x0
 
                         Amin, dTmin = A.copy(), dT.copy()
 
@@ -281,10 +281,10 @@ def main():
 
                 x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(row, np.delete(varvector,row), tag, datfile, trials, othervector, weight, runtime),
                                                     full_output=True, xtol=0.01)
+                varvector[row] = x0
 
                 if fval < fmin:
                     fmin = fval
-                    varvector[row] = x0
 
                     if var == "dT":
                         varmin = dT.copy()
