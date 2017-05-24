@@ -111,7 +111,7 @@ def sendEmail(msg):
     server = smtplib.SMTP("smtp.gmail.com", 587)
     server.starttls()
     server.login("email.notifier.bryanluu@gmail.com", "7788382652")
-    server.sendmail("email.notifier.bryanluu@gmail.com", "bryanluu30794@gmail.com", msg)
+    server.sendmail("email.notifier.bryanluu@gmail.com", "bryanluu30794@gmail.com", '\n'+msg)
     server.quit()
 
 
