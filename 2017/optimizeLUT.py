@@ -43,14 +43,14 @@ def parseTXT(txtfile):
             line = f.readline()
 
     # Parse last line
-    _, hitStr, _, tStr = last.split()
+    _, hitStr, _, tStr, lStr, _ = last.split()
 
     fraction = map(float, hitStr[0:hitStr.rfind('(')].split('/'))
     hit = fraction[0]/fraction[1]
-
+    loops = float(lStr)
     t = float(tStr.rstrip("s"))
 
-    return hit, t
+    return hit, loops
 
 """Returns the avg time of a set of conf files using given LUT"""
 def tryLUT(tag, filename, trials, dT, A, weight, runtime):
