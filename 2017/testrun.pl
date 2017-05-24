@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-$queue_size = 4;
+$queue_size = 2;
 
 (scalar(@ARGV) == 5) or (scalar(@ARGV) == 7) or die "Usage: ./testrun.pl command <LUT.txt> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n";
 
@@ -107,6 +107,7 @@ $count = 0;
 $hit = 0;
 $score = 0;
 $runtime = 0.0;
+$loops = 0.0;
 for $file (sort keys %count){
     $count += $count{$file};
     print REPORT "$file ";
@@ -114,6 +115,7 @@ for $file (sort keys %count){
     printf REPORT "%d/%d(%.0f%%) ",  $hit{$file}, $count{$file}, (100.0*$hit{$file})/$count{$file};
     $score += $score{$file};
     $runtime += $runtime{$file};
+    $loops += $loops{$file};
     if ($hit{$file} > 0) {
         printf REPORT "(%d/%d(%.0f%%)) ", $score{$file}, $count{$file}, (100.0*$score{$file})/$hit{$file};
         printf REPORT "%.3fs loops=%.1f\n", $runtime{$file}/$hit{$file}, (1.0*$loops{$file})/$hit{$file};
@@ -126,10 +128,12 @@ for $file (sort keys %count){
 printf REPORT "Overall: %d/%d(%.0f%%) ", $hit, $count,  (100.0*$hit)/$count;
 if ($hit > 0){
     printf REPORT "(%d/%d(%.0f%%)) ", $score, $count, (100.0*$score)/$hit;
-    printf REPORT "%.3fs\n", $runtime/$hit;
+    printf REPORT "%.3fs ", $runtime/$hit;
+    printf REPORT "%.3f loops\n", $loops/$hit;
 } else {
     printf REPORT "(%d/%d(%.0f%%)) ", $score, $count, 0.0;
-    printf REPORT "%.3fs\n", 0.0;
+    printf REPORT "%.3fs ", 0.0;
+    printf REPORT "%.3f loops\n", 0.0;
 }
 close(REPORT);
 

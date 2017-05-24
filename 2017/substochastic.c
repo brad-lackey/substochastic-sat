@@ -129,7 +129,7 @@ int main(int argc, char **argv){
             break;
           }
         }
-        if (time_spent > 290)
+        if (time_spent > 60)
           break;
 
         t += dt;
@@ -259,8 +259,8 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
     // Parameters finalized: 13 April 2016 (bclackey)
     weight = sat->total_weight/5000.0;
     end_weight = sat->total_weight/5500.0;
-    runtime = exp(0.022*sat->num_vars + 5.9);
-    runstep = exp(0.022*sat->num_vars + 4.6);
+    runtime = exp(0.022*sat->num_vars + 4.8);
+    runstep = exp(0.022*sat->num_vars + 3.5);
     popsize = 16;
     runmode = 1;
     
@@ -344,7 +344,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
     optimal = atoi(argv[3]);
     
     if ( argc == 5 )
-      seed = atoi(argv[4]);
+      seed = atoi(argv[4]) + time(0);
     else
       seed = time(0);
 
