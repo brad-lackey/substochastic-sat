@@ -52,7 +52,7 @@ def parseTXT(txtfile):
 
     return hit, loops
 
-"""Returns the avg time of a set of conf files using given LUT"""
+"""Returns the avg loops of a set of conf files using given LUT"""
 def tryLUT(tag, filename, trials, dT, A, weight, runtime):
     if len(dT) != len(A):
         raise Exception("Vectors dT and A are not the same length!")
@@ -78,11 +78,11 @@ def tryLUT(tag, filename, trials, dT, A, weight, runtime):
     check_call(args)
 
     txtfile = tag + ".txt"
-    hits, avg_time = parseTXT(txtfile)
+    hits, loops = parseTXT(txtfile)
 
     penalty = 10000
     if hits < 1:
-        avg_time = penalty
+        loops = penalty
 
     if verbose:
         # Plot A vs t
@@ -102,9 +102,9 @@ def tryLUT(tag, filename, trials, dT, A, weight, runtime):
         num_iter += 1
 
         print("# Tries: " + str(num_iter))
-        print("Tried dT=" + str(dT) + ", A=" + str(A) + " with a time of " + str(avg_time))
+        print("Tried dT=" + str(dT) + ", A=" + str(A) + " with loops=" + str(loops))
 
-    return avg_time
+    return loops
 
 
 def sendEmail(msg):
@@ -239,7 +239,7 @@ def main():
                             plt.savefig(tag + ".OPTIMAL." + var + ".png")
 
                     if verbose:
-                        print("---------- Found A[{0}]={1}".format(row, x0) + " at time " + str(fval) + " after " + str(numfunc) + " tries, {0}/{1} iterations ----------".format(i+1, N))
+                        print("---------- Found A[{0}]={1}".format(row, x0) + " at loops " + str(fval) + " after " + str(numfunc) + " tries, {0}/{1} iterations ----------".format(i+1, N))
 
                     # Optimize dT next
                     varvector, othervector = dT, A
@@ -265,7 +265,7 @@ def main():
                             plt.savefig(tag + ".OPTIMAL." + var + ".png")
 
                     if verbose:
-                        print("---------- Found dT[{0}]={1}".format(row, x0) + " at time " + str(fval) + " after " + str(numfunc) + " tries, {0}/{1} iterations ----------".format(i+1, N))
+                        print("---------- Found dT[{0}]={1}".format(row, x0) + " at loops " + str(fval) + " after " + str(numfunc) + " tries, {0}/{1} iterations ----------".format(i+1, N))
 
             # if var == dT or A
             else:
@@ -304,12 +304,12 @@ def main():
                         plt.savefig(tag + ".OPTIMAL." + var + ".png")
 
                 if verbose:
-                    print("---------- Found {0}[{1}]={2}".format(var, row, x0) + " at time " + str(fval) + " after " + str(numfunc) + " tries, {0}/{1} iterations ----------".format(i+1, N))
+                    print("---------- Found {0}[{1}]={2}".format(var, row, x0) + " at loops " + str(fval) + " after " + str(numfunc) + " tries, {0}/{1} iterations ----------".format(i+1, N))
 
 
     if verbose:
-        # Print the best time
-        print("Best time: " + str(fmin))
+        # Print the best loops
+        print("Best # loops: " + str(fmin))
 
         ax = plt.gca()
 
@@ -339,9 +339,9 @@ def main():
 
     if email:
         if var == "both":
-            msg = "Optimization finished!\nOptimal dT: {0}\nOptimal A: {1}\nOptimum value: {2}\n".format(dTmin, Amin, fmin)
+            msg = "Optimization finished!\nOptimal dT: {0}\nOptimal A: {1}\nOptimum # loops: {2}\n".format(dTmin, Amin, fmin)
         else:
-            msg = "Optimization finished!\nOptimal " + var + ": " + str(varmin) + "\nOptimum value: " + str(fmin) + "\n"
+            msg = "Optimization finished!\nOptimal " + var + ": " + str(varmin) + "\nOptimum # loops: " + str(fmin) + "\n"
         sendEmail(msg)
 
 
