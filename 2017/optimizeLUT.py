@@ -6,10 +6,12 @@ import numpy as np
 from scipy.optimize import fminbound
 import matplotlib.pyplot as plt
 import smtplib
+import datetime
 
 num_iter = 0
 email = False
 verbose = False
+plotenabled = False
 
 BOUND_CAP = 0.1
 BOUND_MULTIPLIER = 1.1
@@ -84,7 +86,7 @@ def tryLUT(tag, filename, trials, dT, A, weight, runtime):
     if hits < 1:
         loops = penalty
 
-    if verbose:
+    if plotenabled:
         # Plot A vs t
         t = np.cumsum(dT)
         t = t - np.ediff1d(t, to_begin=t[0])/2.0  # staggers the time so that it falls in between the bins
@@ -97,6 +99,8 @@ def tryLUT(tag, filename, trials, dT, A, weight, runtime):
         ax.relim()
         ax.autoscale_view()
         plt.draw()
+
+    if verbose:
 
         global num_iter
         num_iter += 1
@@ -157,6 +161,10 @@ def main():
         global verbose
         verbose = True
         args.remove('-v')
+    if '-p' in args:
+        global plotenabled
+        plotenabled = True
+        args.remove('-p')
     if len(args) == 6 or len(args) == 8:
         var = args[1]
         lutfile = args[2]
@@ -174,9 +182,13 @@ def main():
         print("Usage: ./optimizeLUT dT|A|both [-v] [-m] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
         return 1
 
-    if verbose:
+    if plotenabled:
         # Turn on interactive plotting
         plt.ion()
+
+    if verbose:
+        start = datetime.datetime.now()
+        print("########## STARTING OPTIMIZATION - " + datetime.datetime.now().strftime("%a %d/%m/%y %H:%M:%S") + " ##########")
 
     # Load initial conditions for dT and A
     bins, dT, A = parseLUT(lutfile)
@@ -306,13 +318,16 @@ def main():
                 if verbose:
                     print("---------- Found {0}[{1}]={2}".format(var, row, x0) + " at loops " + str(fval) + " after " + str(numfunc) + " tries, {0}/{1} iterations ----------".format(i+1, N))
 
+            if email:
+                msg = "Progress: {0}/{1}".format(i+1, N) + "\n"
+                msg += "Time spent so far: " + str(datetime.datetime.now() - start) + '\n'
+                sendEmail(msg)
 
     if verbose:
         # Print the best loops
         print("Best # loops: " + str(fmin))
 
-        ax = plt.gca()
-
+    if plotenabled:
         if var == 'dT':
             t = np.cumsum(varmin)
         elif var == 'both':
@@ -339,9 +354,13 @@ def main():
 
     if email:
         if var == "both":
-            msg = "Optimization finished!\nOptimal dT: {0}\nOptimal A: {1}\nOptimum # loops: {2}\n".format(dTmin, Amin, fmin)
+            msg = "Optimization finished after " + str(datetime.datetime.now() - start) + \
+                  ", at " + datetime.datetime.now().strftime("%a %d/%m/%y %H:%M:%S") + \
+                  "!\nOptimal dT: {0}\nOptimal A: {1}\nOptimum # loops: {2}\n".format(dTmin, Amin, fmin)
         else:
-            msg = "Optimization finished!\nOptimal " + var + ": " + str(varmin) + "\nOptimum # loops: " + str(fmin) + "\n"
+            msg = "Optimization finished after " + str(datetime.datetime.now() - start) + \
+                  ", at " + datetime.datetime.now().strftime("%a %d/%m/%y %H:%M:%S") + \
+                  "!\nOptimal " + var + ": " + str(varmin) + "\nOptimum # loops: " + str(fmin) + "\n"
         sendEmail(msg)
 
 
