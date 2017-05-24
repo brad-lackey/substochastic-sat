@@ -45,7 +45,7 @@ def bruteOptimize(index, A):
     # loops = index
     return loops
 
-res = Parallel(n_jobs=N_JOBS)(delayed(bruteOptimize)(i, A) for i, A in enumerate(queue))
+res = Parallel(n_jobs=N_JOBS, verbose=5)(delayed(bruteOptimize)(i, A) for i, A in enumerate(queue))
 
 sendEmail("Optimization Finished!")
 
@@ -57,5 +57,5 @@ print(bestA[0:10])
 for i in range(10):
     makeLUT("a-h.2sat.LUT.BEST.{0}".format(i), 5, dT, bestA[i])
 
-# # Cleans every output file up
-# res = Parallel(n_jobs=N_JOBS)(delayed(cleanup)("a-h.2sat.{0}".format(i)) for i, A in enumerate(queue))
+# Cleans every output file up
+res = Parallel(n_jobs=N_JOBS)(delayed(cleanup)("a-h.2sat.{0}".format(i)) for i, A in enumerate(queue))
