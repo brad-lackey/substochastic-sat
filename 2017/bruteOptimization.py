@@ -1,4 +1,4 @@
-from optimizeLUT import tryLUT, makeLUT
+from optimizeLUT import tryLUT, makeLUT, sendEmail
 import numpy as np
 from joblib import Parallel, delayed
 from itertools import product
@@ -40,9 +40,20 @@ def bruteOptimize(index, A):
     tag = "a-h.2sat." + str(index)
     loops = tryLUT(tag, "./ms_random/a-h.2sat.all.dat", 1, dT, A)
     cleanup(tag)
+    # loops = index
     return loops
 
 res = Parallel(n_jobs=N_JOBS)(delayed(bruteOptimize)(i, A) for i, A in enumerate(queue))
+
+sendEmail("Optimization Finished!")
+
+bestA = np.array([queue[i] for i, loops in sorted(enumerate(res), key=lambda x:x[1])])
+
+# Print the 10 best A's
+print(bestA[0:10])
+
+for i in range(10):
+    makeLUT("a-h.2sat.LUT.BEST.{0}".format(i), 5, dT, bestA[i])
 
 # # Cleans every output file up
 # res = Parallel(n_jobs=N_JOBS)(delayed(cleanup)("a-h.2sat.{0}".format(i)) for i, A in enumerate(queue))
