@@ -1,10 +1,12 @@
 #!/usr/bin/python
 
-from optimizeLUT import tryLUT, makeLUT, sendEmail
+from optimizeLUT import tryLUT, makeLUT, sendEmail,  parseTXT, LOOP_PENALTY
+from subprocess32 import check_call, TimeoutExpired
 import numpy as np
 from joblib import Parallel, delayed
 from itertools import product
-import os
+from cleanupBrute import cleanup
+import sys
 
 # Use all CPUs minus 1
 N_JOBS = -2
@@ -20,32 +22,41 @@ queue = [np.array(i) for i in product(Avals, repeat=bins)]
 
 dT = np.ones(bins)
 
-def cleanup(tag):
-    try:
-        os.remove(tag + ".LUT.{0}.txt".format(bins))
-    except Exception:
-        pass  # No LUT file found
-    try:
-        os.remove(tag + ".log")
-    except Exception:
-        pass  # No log file found
-    try:
-        os.remove(tag + ".out")
-    except Exception:
-        pass  # No out file found
-    try:
-        os.remove(tag + ".txt")
-    except Exception:
-        pass  # No txt file found
-
 def bruteOptimize(index, A):
     tag = "a-h.2sat." + str(index)
-    loops = tryLUT(tag, "./ms_random/a-h.2sat.all.dat", 1, dT, A)
+    # loops = tryLUT(tag, "./ms_random/a-h.2sat.all.dat", 1, dT, A)
+
+    lut = tag + ".LUT." + str(bins) + ".txt"
+
+    makeLUT(lut, bins, dT, A)
+
+    datfile = sys.argv[1]
+
+    args = []
+    args.append('./testrun.pl')  # the program to run
+    args.append('./ssmc')
+    args.append(lut)
+    args.append(datfile)
+    args.append(str(1))
+    args.append(tag)
+
+    # returns 0 if successful otherwise throws error
+    try:
+        check_call(args, timeout=1)
+    except TimeoutExpired:
+        return LOOP_PENALTY
+
+    txtfile = tag + ".txt"
+    hits, loops = parseTXT(txtfile)
+
+    if hits < 1:
+        loops = LOOP_PENALTY
+
     cleanup(tag)
-    # loops = index
+
     return loops
 
-res = Parallel(n_jobs=N_JOBS, verbose=5)(delayed(bruteOptimize)(i, A) for i, A in enumerate(queue))
+res = Parallel(n_jobs=N_JOBS, verbose=5, backend="threading")(delayed(bruteOptimize)(i, A) for i, A in enumerate(queue))
 
 sendEmail("Optimization Finished!")
 
