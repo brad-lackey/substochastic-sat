@@ -6,16 +6,16 @@ import numpy as np
 from joblib import Parallel, delayed
 from itertools import product
 from cleanupBrute import cleanup
-import sys
+import sys, os
 
 if __name__ == "__main__":
 
     if len(sys.argv) != 2:
-        print("Usage: ./bruteOptimization <datfile>")
+        print("Usage: ./bruteOptimization.py <datfile>")
         sys.exit(1)
 
     # Use all CPUs minus 1
-    N_JOBS = 1
+    N_JOBS = 2
 
     # Bins to divide the LUT
     bins = 5
@@ -28,15 +28,45 @@ if __name__ == "__main__":
 
     dT = np.ones(bins)
 
-    def bruteOptimize(index, A):
-        tag = "a-h.2sat." + str(index)
-        # loops = tryLUT(tag, "./ms_random/a-h.2sat.all.dat", 1, dT, A)
+    def saveProgress(progfile, index):
+        with open(progfile, 'a') as f:
+            f.write("Job {0}/{1} Done\n".format(index+1, len(queue)))
 
-        lut = tag + ".LUT." + str(bins) + ".txt"
+    def loadProgress(progfile):
+        indices = []
+        try:
+            with open(progfile, 'r') as f:
+                line = f.readline()
+                while(len(line) > 0):
+                    index = line.split()[1].split('/')[0]
+                    indices.append(int(index)-1)  # save the 0-based index
+                    line = f.readline()
+        except IOError:
+            pass  # No Progress file
+        return indices
+
+
+    datfile = sys.argv[1]
+    # construct tag from datfile title
+    tag = datfile.split('/')[-1].rstrip(".dat")
+    progfile = tag + ".PROGRESS.txt"
+
+    # get finished indices
+    done = loadProgress(progfile)
+
+    # create list of indices to complete
+    indices = range(len(queue))
+
+    # delete finished indices from index list
+    for i in sorted(done, reverse=True):
+        del indices[i]
+
+    def bruteOptimize(index, A):
+        fulltag = tag + "." + str(index)
+
+        lut = fulltag + ".LUT." + str(bins) + ".txt"
 
         makeLUT(lut, bins, dT, A)
-
-        datfile = sys.argv[1]
 
         args = []
         args.append('./testrun.pl')  # the program to run
@@ -44,40 +74,52 @@ if __name__ == "__main__":
         args.append(lut)
         args.append(datfile)
         args.append(str(1))
-        args.append(tag)
+        args.append(fulltag)
 
         # returns 0 if successful otherwise throws error
         try:
-            check_call(args, timeout=1)
+            check_call(args, timeout=210)
         except TimeoutExpired:
             return LOOP_PENALTY
 
-        txtfile = tag + ".txt"
+        txtfile = fulltag + ".txt"
         hits, loops = parseTXT(txtfile)
 
         if hits < 1:
             loops = LOOP_PENALTY
 
-        cleanup(tag, bins)
+        cleanup(fulltag, bins)
 
         print("Job " + str(index+1) + "/" + str(len(queue)) + " Done")
-        # loops = index
+
+        saveProgress(progfile, index)
+
         return loops
 
-    res = Parallel(n_jobs=N_JOBS, verbose=5, backend="threading")(delayed(bruteOptimize)(i, A) for i, A in enumerate(queue))
+    try:
+        res = Parallel(n_jobs=N_JOBS, verbose=5)(delayed(bruteOptimize)(i, queue[i]) for i in indices)
 
-    sendEmail("Optimization Finished!")
+        sendEmail("Optimization Finished!")
 
-    sortedRes = sorted(enumerate(res), key=lambda x:x[1])
+        sortedRes = sorted(enumerate(res), key=lambda x:x[1])
 
-    # Print and save the 10 best A's
-    for i in range(10):
-        index, loop = sortedRes[i]
-        bestA = queue[index]
-        print("Found " + str(loop) + ", A=" + str(bestA))
-        makeLUT("a-h.2sat.LUT.BEST.{0}".format(i), 5, dT, bestA)
+        # Print and save the 10 best A's
+        for i in range(10):
+            index, loop = sortedRes[i]
+            bestA = queue[index]
+            print("Found " + str(loop) + ", A=" + str(bestA))
+            makeLUT("a-h.2sat.LUT.BEST.{0}".format(i), 5, dT, bestA)
 
-    # Cleans every output file up
-    res = Parallel(n_jobs=N_JOBS)(delayed(cleanup)("a-h.2sat.{0}".format(i), bins) for i, A in enumerate(queue))
+    except KeyboardInterrupt:
+
+        print("Cleaning output files...")
+        datfile = sys.argv[1]
+
+        # construct tag from datfile title
+        tag = datfile.split('/')[-1].rstrip(".dat")
+
+        # Cleans every output file up
+        res = Parallel(n_jobs=-1)(delayed(cleanup)("{0}.{1}".format(tag, i), bins) for i, A in enumerate(queue))
+        print("Done!")
 
     sys.exit(0)

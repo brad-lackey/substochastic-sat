@@ -27,6 +27,12 @@ def cleanup(tag, bins):
 
 if __name__ == "__main__":
 
+    if len(sys.argv) != 2:
+        print("Usage: ./cleanupBrute.py tag")
+        sys.exit(1)
+
+    tag = sys.argv[1]
+
     # Use all CPUs minus 1
     N_JOBS = -2
 
@@ -42,6 +48,6 @@ if __name__ == "__main__":
     dT = np.ones(bins)
 
     # Cleans every output file up
-    res = Parallel(n_jobs=N_JOBS)(delayed(cleanup)("a-h.2sat.{0}".format(i), bins) for i, A in enumerate(queue))
+    res = Parallel(n_jobs=N_JOBS)(delayed(cleanup)("{0}.{1}".format(tag, i), bins) for i, A in enumerate(queue))
 
     sys.exit(0)
