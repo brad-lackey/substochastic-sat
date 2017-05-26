@@ -240,16 +240,19 @@ if __name__ == "__main__":
     try:
         res = Parallel(n_jobs=N_JOBS, verbose=5)(delayed(bruteOptimize)(i, A_list[i], reslock) for i in indices)
 
-        sendEmail("Optimization Finished!")
-
         # Print and save the best A's
         results = getResults(reslock)
+
+        msg = "Optimization Finished!\n"
 
         for rank, tup in enumerate(sorted(results.iteritems(), key=lambda x: x[1][0])):
             i = tup[0]
             loop, t = tup[1]
-            print("Rank {0}: loops={1}, A={2}, time={3}".format(rank+1, loop, A_list[i], t))
+            msg += "Rank {0}: loops={1}, A={2}, time={3}\n".format(rank+1, loop, A_list[i], t)
             makeLUT(tag + ".LUT.{0}.BEST.{1}.txt".format(bins, rank+1), bins, dT, A_list[i])
+
+        print(msg)
+        sendEmail(msg)
 
     except KeyboardInterrupt:
 
