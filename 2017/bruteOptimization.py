@@ -11,8 +11,22 @@ import time
 
 if __name__ == "__main__":
 
-    if len(sys.argv) != 2:
-        print("Usage: ./bruteOptimization.py <datfile>")
+    args = sys.argv
+    verbosity = 0
+    if '-v' in args:
+        try:
+            v = args[args.index('-v') + 1]
+            verbosity = int(v)
+            args.remove('-v')
+            args.remove(v)
+            if verbosity < 0 or verbosity > 2:
+                raise ValueError
+        except (IndexError, ValueError):
+            print("Usage: ./bruteOptimization.py <datfile> [-v <verbosity (0: default no msgs, 1: update on minimum, 2: every job)>]")
+            sys.exit(1)
+
+    if len(args) != 2:
+        print("Usage: ./bruteOptimization.py <datfile> [-v <verbosity (0: default no msgs, 1: update on minimum, 2: every job)>]")
         sys.exit(1)
 
     # Use all CPUs minus 1
@@ -52,8 +66,7 @@ if __name__ == "__main__":
             pass  # No Progress file
         return indices
 
-
-    datfile = sys.argv[1]
+    datfile = args[1]
     # construct tag from datfile title
     tag = datfile.split('/')[-1].rstrip(".dat")
     progfile = tag + ".PROGRESS.txt"
@@ -162,7 +175,9 @@ if __name__ == "__main__":
                 for i, tup in sorted(results.iteritems(), key=lambda x: x[1][0])[0:MAX_LUT]:
                     loop, t = tup
                     f.write("index={0}; loops={1}; time={2}s; A={3}\n".format(i, loop, t, A_list[i]))
-            print("New minimum ({0}) added, at A={1}. See ".format(loops, A_list[index]) + resFile + " for details.")
+
+            if verbosity > 0:
+                print("New minimum ({0}) added, at A={1}. See ".format(loops, A_list[index]) + resFile + " for details.")
 
         # set CUTOFF_TIME to the largest timeout in the top MAX_LUT results
         lastVal = sorted(results.values(), key=lambda x: x[1], reverse=True)[0][1]
@@ -170,7 +185,9 @@ if __name__ == "__main__":
         global CUTOFF_TIME
         if lastVal < CUTOFF_TIME:
             CUTOFF_TIME = lastVal
-            print("Using new timeout of {0}".format(CUTOFF_TIME))
+
+            if verbosity > 0:
+                print("Using new timeout of {0}".format(CUTOFF_TIME))
 
         lock.unlock()
 
@@ -197,7 +214,8 @@ if __name__ == "__main__":
         try:
             check_call(args, timeout=CUTOFF_TIME)
         except TimeoutExpired:
-            print("Job {0}/{1} Timed Out!".format(index+1, len(A_list)))
+            if verbosity > 1:
+                print("Job {0}/{1} Timed Out!".format(index+1, len(A_list)))
             saveProgress(progfile, index, success=False)  # save the index so that we don't have to redo it
             return LOOP_PENALTY
         timeout = time.time() - begin
@@ -214,7 +232,8 @@ if __name__ == "__main__":
 
         updateResults(index, loops, timeout, queue)
 
-        print("Job {0}/{1} Done".format(index+1, len(A_list)))
+        if verbosity > 1:
+            print("Job {0}/{1} Done".format(index+1, len(A_list)))
 
         return loops
 
