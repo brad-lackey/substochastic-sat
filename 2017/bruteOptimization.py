@@ -6,7 +6,8 @@ import numpy as np
 from joblib import Parallel, delayed
 from itertools import product
 from cleanupBrute import cleanup
-import sys, os
+import sys
+from multiprocessing import Queue
 
 if __name__ == "__main__":
 
@@ -17,6 +18,9 @@ if __name__ == "__main__":
     # Use all CPUs minus 1
     N_JOBS = 2
 
+    # Save at most this number of LUTs
+    MAX_LUT = 10
+
     # Bins to divide the LUT
     bins = 5
 
@@ -24,13 +28,13 @@ if __name__ == "__main__":
     Avals = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 
     # list of A combinations
-    queue = [np.array(i) for i in product(Avals, repeat=bins)]
+    A_list = [np.array(i) for i in product(Avals, repeat=bins)]
 
     dT = np.ones(bins)
 
     def saveProgress(progfile, index):
         with open(progfile, 'a') as f:
-            f.write("Job {0}/{1} Done\n".format(index+1, len(queue)))
+            f.write("Job {0}/{1} Done\n".format(index + 1, len(A_list)))
 
     def loadProgress(progfile):
         indices = []
@@ -55,13 +59,110 @@ if __name__ == "__main__":
     done = loadProgress(progfile)
 
     # create list of indices to complete
-    indices = range(len(queue))
+    indices = range(len(A_list))
 
     # delete finished indices from index list
     for i in sorted(done, reverse=True):
         del indices[i]
 
-    def bruteOptimize(index, A):
+    class FileLock:
+        def __init__(self):
+            self.locked = False
+
+        def lock(self):
+            while self.locked:
+                pass
+            self.locked = True
+
+        def unlock(self):
+            self.locked = False
+
+    # create the queue for results saving
+    reslock = FileLock()
+
+    # file to store the top MAX_LUT results
+    resFile = tag + ".RESULTS.txt"
+
+
+    """Returns a dictionary of the MAX_LUT best loops"""
+    def getResults(lock):
+        results = {}
+
+        lock.lock()
+
+        try:
+            with open(resFile, 'r') as f:
+                line = f.readline()
+                while(len(line) > 0):
+                    iStr, loopStr, Astr = line.split(";")
+                    i = int(iStr.split('=')[1])
+                    loop = float(loopStr.split('=')[1])
+
+                    # save the loop from the file
+                    results[i] = loop
+
+                    line = f.readline()
+        except IOError:
+            pass  # No results yet
+
+        lock.unlock()
+
+        return results
+
+
+    """Returns a dictionary of the MAX_LUT best loops"""
+    def updateResults(index, loops, lock):
+        results = {}
+
+        lock.lock()
+
+        new_min_found = False
+        try:
+            with open(resFile, 'r') as f:
+                line = f.readline()
+                while(len(line) > 0):
+                    tup = line.split("; ")
+                    if len(tup) != 3:
+                        line = f.readline()
+                        continue
+
+                    iStr, loopStr, Astr = tup
+                    i = int(iStr.split('=')[1])
+                    loop = float(loopStr.split('=')[1])
+
+                    if i == index:
+                        line = f.readline()  # skip if i is given index
+                        continue
+
+                    # save the loop from the file
+                    results[i] = loop
+
+                    if not new_min_found and loops < loop:
+                        new_min_found = True
+
+                    line = f.readline()
+        except IOError:
+            pass  # No results yet
+
+        if len(results) < MAX_LUT and index not in results:
+            new_min_found = True
+
+        results[index] = loops
+
+        # only write to results if there is reason to
+        if new_min_found:
+            with open(resFile, 'w') as f:
+                # iterate through results in sorted order by loop time, keeping only the top MAX_LUT
+                for i, loop in sorted(results.iteritems(), key=lambda x: x[1])[0:MAX_LUT]:
+                    f.write("index={0}; loops={1}; A={2}\n".format(i, loop, A_list[i]))
+            print("New minimum ({0}) added, at A={1}. See ".format(loops, A_list[index]) + resFile + " for results.")
+
+        lock.unlock()
+
+        return results
+
+
+    def bruteOptimize(index, A, queue):
         fulltag = tag + "." + str(index)
 
         lut = fulltag + ".LUT." + str(bins) + ".txt"
@@ -90,25 +191,25 @@ if __name__ == "__main__":
 
         cleanup(fulltag, bins)
 
-        print("Job " + str(index+1) + "/" + str(len(queue)) + " Done")
-
         saveProgress(progfile, index)
+
+        results = updateResults(index, loops, queue)
 
         return loops
 
     try:
-        res = Parallel(n_jobs=N_JOBS, verbose=5)(delayed(bruteOptimize)(i, queue[i]) for i in indices)
+        res = Parallel(n_jobs=N_JOBS, verbose=5)(delayed(bruteOptimize)(i, A_list[i], reslock) for i in indices)
 
         sendEmail("Optimization Finished!")
 
-        sortedRes = sorted(enumerate(res), key=lambda x:x[1])
+        # Print and save the best A's
+        results = getResults(reslock)
 
-        # Print and save the 10 best A's
-        for i in range(10):
-            index, loop = sortedRes[i]
-            bestA = queue[index]
-            print("Found " + str(loop) + ", A=" + str(bestA))
-            makeLUT("a-h.2sat.LUT.BEST.{0}".format(i), 5, dT, bestA)
+        for rank, tup in enumerate(sorted(results.iteritems(), key=lambda x: x[1])):
+            i = tup[0]
+            loop = tup[1]
+            print("Rank {0}: loops={1}, A={2}".format(rank+1, loop, A_list[i]))
+            makeLUT(tag + ".LUT.{0}.BEST.{1}.txt".format(bins, rank+1), bins, dT, A_list[i])
 
     except KeyboardInterrupt:
 
@@ -119,7 +220,7 @@ if __name__ == "__main__":
         tag = datfile.split('/')[-1].rstrip(".dat")
 
         # Cleans every output file up
-        res = Parallel(n_jobs=-1)(delayed(cleanup)("{0}.{1}".format(tag, i), bins) for i, A in enumerate(queue))
+        res = Parallel(n_jobs=-1)(delayed(cleanup)("{0}.{1}".format(tag, i), bins) for i, A in enumerate(A_list))
         print("Done!")
 
     sys.exit(0)
