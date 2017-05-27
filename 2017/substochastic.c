@@ -36,6 +36,7 @@ static potential_t optimal;
 
 void update(double a, double b, double mean, Population P, int parity);
 int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut);
+int descend(Population P);
 
 
 int main(int argc, char **argv){
@@ -72,6 +73,11 @@ int main(int argc, char **argv){
   
   
   randomPopulation(pop,popsize);
+#if GREEDY_DESCENT
+  if ( (err = descend(pop)) ){
+    return err;
+  }
+#endif
   end = clock();
   if ( pop->winner->potential < topweight ) {
     printf("o %ld\n", pop->winner->potential);
@@ -88,7 +94,7 @@ int main(int argc, char **argv){
   try = 1;
   while (1) {
     parity = 0;
-    randomPopulation(pop,popsize);
+//    randomPopulation(pop,popsize);
     local_min = min;
 
     for(int time_index=0; time_index < lut->nrows; time_index++) {
@@ -129,8 +135,8 @@ int main(int argc, char **argv){
             break;
           }
         }
-        if (time_spent > 60)
-          break;
+//        if (time_spent > 30)
+//          break;
 
         t += dt;
         parity ^= 1;
@@ -150,7 +156,7 @@ int main(int argc, char **argv){
       }
     }
     
-    if ( time_spent > 290 ){
+    if ( time_spent > 30 ){
       return 1;
     }
     
@@ -179,6 +185,12 @@ int main(int argc, char **argv){
     
     ++try;
     randomPopulation(pop,popsize);
+#if GREEDY_DESCENT
+    if ( (err = descend(pop)) ){
+      return err;
+    }
+#endif
+
   }
   
   freeBitstring(&solution);
@@ -298,7 +310,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
     end_weight = sat->total_weight/10000.0;
     runtime = exp(0.035*sat->num_vars + 6.1);
     runstep = exp(0.030*sat->num_vars + 4.4);
-    popsize = 16;
+    popsize = 64;
     runmode = 1;
     
   }
@@ -334,7 +346,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
     end_weight = 0.01;
     runtime = exp(0.032*sat->num_vars + 9.3);
     runstep = exp(0.036*sat->num_vars + 7.9);
-    popsize = 16;
+    popsize = 128;
     runmode = 2;
   }
   
@@ -344,7 +356,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
     optimal = atoi(argv[3]);
     
     if ( argc == 5 )
-      seed = atoi(argv[4]) + time(0);
+      seed = atoi(argv[4]);
     else
       seed = time(0);
 
@@ -368,7 +380,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
     runstep = 100;
   }
   
-  //  printf("c Population size: %d\n", popsize);
+  printf("c Population size: %d\n", popsize);
   //  printf("c Starting runtime: %.0f\n", runtime);
   //  printf("c Runtime step per loop: %.0f\n", runstep);
   //  printf("c Step weight: %.3f\n", weight);
@@ -458,3 +470,60 @@ void update(double a, double b, double mean, Population P, int parity){
   P->min_v = min;
   P->max_v = max;
 }
+
+// Preprocess a random start with greedy descent.
+int descend(Population P){
+  int i,j,k,argmin;
+  int err;
+  potential_t e,min;
+  static Bitstring * stack;
+  
+  if ( (stack = (Bitstring *) malloc(P->sat->num_vars*sizeof(Bitstring))) == NULL ) return MEMORY_ERROR;
+  for (i=0; i<P->sat->num_vars; ++i) {
+    if ( (err = initBitstring(stack + i)) ) {
+      return err;
+    }
+  }
+  
+  for (i=0; i<P->psize; ++i) {
+    
+    while(1){
+      
+      argmin = -1;
+      min = P->walker[i]->potential;
+      
+      for (j=0; j<P->sat->num_vars; ++j) {
+        k = flipBit(stack[j], P->walker[i], j);
+        if ( P->ds != NULL )
+          e = P->walker[i]->potential + ((k>0)-(k<0))*getPotential(stack[j],P->ds->der[j]);
+        else {
+          if ( P->tbl != NULL )
+            e = getPotential2(stack[j],P->tbl);
+          else
+            e = getPotential(stack[j],P->sat);
+        }
+        
+        if ( e < min ) {
+          argmin = j;
+          min = e;
+          stack[j]->potential = e;
+        }
+      }
+      
+      if ( argmin >= 0 ) {
+        copyBitstring(P->walker[i], stack[argmin]);
+        if ( stack[argmin]->potential < P->winner->potential ) {
+          copyBitstring(P->winner, stack[argmin]);
+        }
+      } else {
+        break;
+      }
+    }
+  }
+  
+  for (i=0; i<P->sat->num_vars; ++i)
+    freeBitstring(stack + i);
+  
+  return 0;
+}
+

@@ -10,6 +10,9 @@ ssmc : substochastic.c bitstring.o sat.o population.o LUT.o
 	$(CC) $(CFLAGS) $(INC) substochastic.c bitstring.o sat.o population.o LUT.o $(LIB) $(LINK) -o ssmc
 	strip ssmc
 
+greedy : greedy.c bitstring.o sat.o population.o
+	$(CC) $(CFLAGS) $(INC) greedy.c bitstring.o sat.o population.o $(LIB) $(LINK) -o greedy
+
 bitstring.o : bitstring.c bitstring.h macros.h
 	$(CC) $(CFLAGS) $(INC) -c bitstring.c 
 

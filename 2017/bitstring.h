@@ -40,6 +40,7 @@ int randomBitstring(Bitstring bst);                      ///< Routine for fillin
 void copyBitstring(Bitstring bst_out, Bitstring bst_in); ///< Routine for copying a bitstring.
 
 // Key function for use in the algorithm.
+int flipBit(Bitstring bst_out, Bitstring bst_in, int i);
 int randomBitFlip(Bitstring bst_out, Bitstring bst_in); ///< Routine for stepping on the hypercube.
 
 

@@ -126,6 +126,17 @@ void copyBitstring(Bitstring bst_out, Bitstring bst_in){
   bst_out->potential = bst_in->potential;
 }
 
+int flipBit(Bitstring bst_out, Bitstring bst_in, int i){
+  // Copy bitstring.
+  copyBitstring(bst_out, bst_in);
+
+  // Flip that bit.
+  bst_out->node[i/VARIABLE_NUMB_BITS] ^= ((word_t) 1) << (i % VARIABLE_NUMB_BITS);
+  
+  // Return direction bit was flipped
+  return (1-2*((int) ((bst_in->node[i/VARIABLE_NUMB_BITS] >> (i % VARIABLE_NUMB_BITS)) & 1) ));
+}
+
 /**
  * A random bit is flipped in the input bitstring, and result is copied to the output.
  * It is assumed that the memory of the target bitstring is allocated.
@@ -136,22 +147,18 @@ void copyBitstring(Bitstring bst_out, Bitstring bst_in){
  * @return Signed index of bit that was flipped.
  */
 int randomBitFlip(Bitstring bst_out, Bitstring bst_in){
-  int i;
-  word_t j;
-  
-  // Copy bitstring.
-  copyBitstring(bst_out, bst_in);
+  int i,j;
+//  word_t j;
   
   // Choose a random bit.
   i = lrand48() % nbts;
   
   // Find the value of the bit.
-  j = (bst_out->node[i/VARIABLE_NUMB_BITS] >> (i % VARIABLE_NUMB_BITS)) & 1;
+ // j = (bst_in->node[i/VARIABLE_NUMB_BITS] >> (i % VARIABLE_NUMB_BITS)) & 1;
   
-  // Flip that bit.
-  bst_out->node[i/VARIABLE_NUMB_BITS] ^= ((word_t) 1) << (i % VARIABLE_NUMB_BITS);
+  j = flipBit(bst_out, bst_in, i);
   
   // Return the bit that was flipped.
-  return (1-2*((int) j))*(i+1);
+  return j*(i+1);
 }
 
