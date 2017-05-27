@@ -105,7 +105,7 @@ int main(int argc, char **argv){
 //      printf("%u: %lf, %lf\n", time_index, lut->times[time_index], lut->vals[time_index]);
 
       t = 0;
-      while (t < runtime*(lut->times[time_index]/lut->total_time)) {
+      while (t < runtime*(lut->times[time_index])) {
 
 //      a = weight*(1.0 - t/runtime); // Turned weight into percent -- Michael 3/30/16
 //      b = (t/runtime);

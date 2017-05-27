@@ -33,7 +33,7 @@ typedef long potential_t;
 //#define BITS_PER_WORD (8*sizeof(word_t))
 
 #define TRACK_GLOBAL_BIASES 0   ///< Turn on/off biasing of individual bits based on problem structure/previous solutions.
-#define GREEDY_DESCENT 1
+#define GREEDY_DESCENT 0
 
 #if TRACK_GLOBAL_BIASES
 #define INITIAL_BUILD_RELAXATION 0.95  ///< Relaxation on the initial distribution based on examining the SAT instance.
