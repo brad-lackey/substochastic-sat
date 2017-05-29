@@ -41,7 +41,7 @@ int descend(Population P);
 
 
 int main(int argc, char **argv){
-  int parity, try, err;
+  int parity, try, err, updates;
   double mean;
   double a, b, t, dt;
   Population pop;
@@ -86,13 +86,14 @@ int main(int argc, char **argv){
     printBits(stdout, pop->winner);
     fflush(stdout);
     time_spent = (double)(end - beg)/CLOCKS_PER_SEC;
-    printf("c Walltime: %f seconds, 0 loops\n", time_spent);
+    printf("c Walltime: %f seconds, 0 loops, 0 updates\n", time_spent);
   }
   fflush(stdout);
   min = pop->winner->potential;
   if (min <= optimal) exit(0);
   
   try = 1;
+  updates = 0;
   while (1) {
     parity = 0;
 //    randomPopulation(pop,popsize);
@@ -121,6 +122,7 @@ int main(int argc, char **argv){
 //          dt = runtime - t;
 
         update(a*dt, b*dt, mean, pop, parity);
+        updates++;
 
         end = clock();
         time_spent = (double) (end - beg) / CLOCKS_PER_SEC;
@@ -129,7 +131,7 @@ int main(int argc, char **argv){
           local_min = pop->winner->potential;
           if (local_min < topweight) {
             printf("o %ld\n", local_min);
-            printf("c Walltime: %f seconds, %d loop(s)\n", time_spent, try);
+            printf("c Walltime: %f seconds, %d loop(s), %d update(s)\n", time_spent, try, updates);
             fflush(stdout);
           }
           if (local_min <= optimal) {

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from optimizeLUT import makeLUT, sendEmail,  parseTXT, LOOP_PENALTY
+from optimizeLUT import makeLUT, sendEmail, parseTXT, UPDATE_PENALTY
 from subprocess32 import check_call, TimeoutExpired
 import numpy as np
 from joblib import Parallel, delayed
@@ -101,7 +101,7 @@ if __name__ == "__main__":
 
     CUTOFF_TIME = 60
 
-    """Returns a dictionary of the MAX_LUT best loops"""
+    """Returns a dictionary of the MAX_LUT best updates"""
     def getResults(lock):
         results = {}
 
@@ -111,13 +111,13 @@ if __name__ == "__main__":
             with open(resFile, 'r') as f:
                 line = f.readline()
                 while(len(line) > 0):
-                    iStr, loopStr, tStr, Astr = line.split(";")
+                    iStr, updateStr, tStr, Astr = line.split(";")
                     i = int(iStr.split('=')[1])
-                    loop = float(loopStr.split('=')[1])
+                    update = float(updateStr.split('=')[1])
                     t = float(tStr.rstrip('s').split('=')[1])
 
-                    # save the loop from the file
-                    results[i] = (loop, t)
+                    # save the update from the file
+                    results[i] = (update, t)
 
                     line = f.readline()
         except IOError:
@@ -128,8 +128,8 @@ if __name__ == "__main__":
         return results
 
 
-    """Returns a dictionary of the MAX_LUT best loops"""
-    def updateResults(index, loops, timeout, lock):
+    """Returns a dictionary of the MAX_LUT best updates"""
+    def updateResults(index, updates, timeout, lock):
         results = {}
 
         lock.lock()
@@ -144,19 +144,19 @@ if __name__ == "__main__":
                         line = f.readline()
                         continue
 
-                    iStr, loopStr, tStr, Astr = tup
+                    iStr, updateStr, tStr, Astr = tup
                     i = int(iStr.split('=')[1])
-                    loop = float(loopStr.split('=')[1])
+                    update = float(updateStr.split('=')[1])
                     t = float(tStr.rstrip('s').split('=')[1])
 
                     if i == index:
                         line = f.readline()  # skip if i is given index
                         continue
 
-                    # save the loop from the file
-                    results[i] = (loop, t)
+                    # save the update from the file
+                    results[i] = (update, t)
 
-                    if not new_min_found and loops < loop:
+                    if not new_min_found and updates < update:
                         new_min_found = True
 
                     line = f.readline()
@@ -166,18 +166,18 @@ if __name__ == "__main__":
         if len(results) < MAX_LUT and index not in results:
             new_min_found = True
 
-        results[index] = (loops, timeout)
+        results[index] = (updates, timeout)
 
         # only write to results if there is reason to
         if new_min_found:
             with open(resFile, 'w') as f:
                 # iterate through results in sorted order by loop time, keeping only the top MAX_LUT results
                 for i, tup in sorted(results.iteritems(), key=lambda x: x[1][0])[0:MAX_LUT]:
-                    loop, t = tup
-                    f.write("index={0}; loops={1}; time={2}s; A={3}\n".format(i, loop, t, A_list[i]))
+                    update, t = tup
+                    f.write("index={0}; updates={1}; time={2}s; A={3}\n".format(i, update, t, A_list[i]))
 
             if verbosity > 0:
-                print("New minimum ({0}) added, at A={1}. See ".format(loops, A_list[index]) + resFile + " for details.")
+                print("New minimum ({0}) added, at A={1}. See ".format(updates, A_list[index]) + resFile + " for details.")
 
         # set CUTOFF_TIME to the largest timeout in the top MAX_LUT results
         lastVal = sorted(results.values(), key=lambda x: x[1], reverse=True)[0][1]
@@ -217,25 +217,25 @@ if __name__ == "__main__":
             if verbosity > 1:
                 print("Job {0}/{1} Timed Out!".format(index+1, len(A_list)))
             saveProgress(progfile, index, success=False)  # save the index so that we don't have to redo it
-            return LOOP_PENALTY
+            return UPDATE_PENALTY
         timeout = time.time() - begin
 
         txtfile = fulltag + ".txt"
-        hits, loops = parseTXT(txtfile)
+        hits, updates = parseTXT(txtfile)
 
         if hits < 1:
-            loops = LOOP_PENALTY
+            updates = UPDATE_PENALTY
 
         cleanup(fulltag, bins)
 
         saveProgress(progfile, index)
 
-        updateResults(index, loops, timeout, queue)
+        updateResults(index, updates, timeout, queue)
 
         if verbosity > 1:
             print("Job {0}/{1} Done".format(index+1, len(A_list)))
 
-        return loops
+        return updates
 
     try:
         res = Parallel(n_jobs=N_JOBS, verbose=5)(delayed(bruteOptimize)(i, A_list[i], reslock) for i in indices)
@@ -247,8 +247,8 @@ if __name__ == "__main__":
 
         for rank, tup in enumerate(sorted(results.iteritems(), key=lambda x: x[1][0])):
             i = tup[0]
-            loop, t = tup[1]
-            msg += "Rank {0}: loops={1}, A={2}, time={3}\n".format(rank+1, loop, A_list[i], t)
+            update, t = tup[1]
+            msg += "Rank {0}: updates={1}, A={2}, time={3}\n".format(rank+1, update, A_list[i], t)
             makeLUT(tag + ".LUT.{0}.BEST.{1}.txt".format(bins, rank+1), bins, dT, A_list[i])
 
         print(msg)

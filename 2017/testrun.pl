@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-$queue_size = 2;
+$queue_size = 4;
 
 (scalar(@ARGV) == 5) or (scalar(@ARGV) == 7) or die "Usage: ./testrun.pl command <LUT.txt> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n";
 
@@ -64,13 +64,14 @@ while ( scalar(@stack) > 0 ){
                 @c = split (/\s/,$line);
                 $time = $c[2];
                 $loops = $c[4];
+                $updates = $c[6];
             }
         }
         
         my @a = split(/\s+/,$job);
         open(OUT, ">>$tag.out") || die;
         flock(OUT, 2) || die;
-        print OUT "$a[-3] $opt $time $loops\n";
+        print OUT "$a[-3] $opt $time $loops $updates\n";
         close(OUT);
         exit(0);
     }
@@ -97,6 +98,7 @@ while( <IN> ){
         }
         $runtime{$a[0]} += $a[2];
         $loops{$a[0]} += $a[3];
+        $updates{$a[0]} += $a[4];
     }
 }
 close(IN);
@@ -108,6 +110,7 @@ $hit = 0;
 $score = 0;
 $runtime = 0.0;
 $loops = 0.0;
+$updates = 0;
 for $file (sort keys %count){
     $count += $count{$file};
     print REPORT "$file ";
@@ -116,12 +119,13 @@ for $file (sort keys %count){
     $score += $score{$file};
     $runtime += $runtime{$file};
     $loops += $loops{$file};
+    $updates += $updates{$file};
     if ($hit{$file} > 0) {
         printf REPORT "(%d/%d(%.0f%%)) ", $score{$file}, $count{$file}, (100.0*$score{$file})/$hit{$file};
-        printf REPORT "%.3fs loops=%.1f\n", $runtime{$file}/$hit{$file}, (1.0*$loops{$file})/$hit{$file};
+        printf REPORT "%.3fs loops=%.1f updates=%.3f\n", $runtime{$file}/$hit{$file}, (1.0*$loops{$file})/$hit{$file}, $updates{$file}/$hit{$file};
     } else {
         printf REPORT "(%d/%d(%.0f%%)) ", $score{$file}, $count{$file}, 0.0;
-        printf REPORT "%.3fs loops=%.1f\n", 0.0, 0.0;
+        printf REPORT "%.3fs loops=%.1f updates=%.1f\n", 0.0, 0.0, 0.0;
     }
 }
 
@@ -129,11 +133,13 @@ printf REPORT "Overall: %d/%d(%.0f%%) ", $hit, $count,  (100.0*$hit)/$count;
 if ($hit > 0){
     printf REPORT "(%d/%d(%.0f%%)) ", $score, $count, (100.0*$score)/$hit;
     printf REPORT "%.3fs ", $runtime/$hit;
-    printf REPORT "%.3f loops\n", $loops/$hit;
+    printf REPORT "%.3f loops ", $loops/$hit;
+    printf REPORT "%.3f updates\n", $updates/$hit;
 } else {
     printf REPORT "(%d/%d(%.0f%%)) ", $score, $count, 0.0;
     printf REPORT "%.3fs ", 0.0;
-    printf REPORT "%.3f loops\n", 0.0;
+    printf REPORT "%.3f loops ", 0.0;
+    printf REPORT "%.3f updates\n", $updates/$hit;
 }
 close(REPORT);
 

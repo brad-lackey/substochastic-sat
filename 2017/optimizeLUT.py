@@ -10,7 +10,7 @@ import datetime
 
 BOUND_CAP = 0.1
 BOUND_MULTIPLIER = 1.1
-LOOP_PENALTY = 10000
+UPDATE_PENALTY = 100000
 
 """Returns the dT and A vectors from a LUT file as a tuple"""
 def parseLUT(lutfile):
@@ -41,16 +41,17 @@ def parseTXT(txtfile):
             line = f.readline()
 
     # Parse last line
-    _, hitStr, _, tStr, lStr, _ = last.split()
+    _, hitStr, _, tStr, lStr, _, uStr, _ = last.split()
 
     fraction = map(float, hitStr[0:hitStr.rfind('(')].split('/'))
     hit = fraction[0]/fraction[1]
     loops = float(lStr)
     t = float(tStr.rstrip("s"))
+    updates = float(uStr)
 
-    return hit, loops
+    return hit, updates
 
-"""Returns the avg loops of a set of conf files using given LUT"""
+"""Returns the avg updates of a set of conf files using given LUT"""
 def tryLUT(tag, filename, trials, dT, A, weight=None, runtime=None, plotenabled=False, verbose=False):
     if len(dT) != len(A):
         raise Exception("Vectors dT and A are not the same length!")
@@ -74,15 +75,15 @@ def tryLUT(tag, filename, trials, dT, A, weight=None, runtime=None, plotenabled=
 
     # returns 0 if successful otherwise throws error
     try:
-        check_call(args, timeout=1)
+        check_call(args, timeout=10)
     except TimeoutExpired:
-        return LOOP_PENALTY
+        return UPDATE_PENALTY
 
     txtfile = tag + ".txt"
-    hits, loops = parseTXT(txtfile)
+    hits, updates = parseTXT(txtfile)
 
     if hits < 1:
-        loops = LOOP_PENALTY
+        updates = UPDATE_PENALTY
 
     if plotenabled:
         # Plot A vs t
@@ -99,9 +100,9 @@ def tryLUT(tag, filename, trials, dT, A, weight=None, runtime=None, plotenabled=
         plt.draw()
 
     if verbose:
-        print("Tried dT=" + str(dT) + ", A=" + str(A) + " with loops=" + str(loops))
+        print("Tried dT=" + str(dT) + ", A=" + str(A) + " with updates=" + str(updates))
 
-    return loops
+    return updates
 
 
 def sendEmail(msg):
@@ -112,7 +113,7 @@ def sendEmail(msg):
     server.quit()
 
 
-def getABounds(bins, row, varvector):
+def getBounds(bins, row, varvector):
     if row == 0 or row == bins - 1:
         if row == 0:
             diff = BOUND_MULTIPLIER * abs(varvector[row + 1] - varvector[row])
@@ -231,7 +232,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
                     # Optimize A first
                     varvector, othervector = A, dT
 
-                    lbound, ubound = getABounds(bins, row, varvector)
+                    lbound, ubound = getBounds(bins, row, varvector)
 
                     x0, fval, ierr, numfunc = fminbound(f_A, lbound, ubound, args=(
                     row, np.delete(varvector, row), tag, datfile, trials, othervector, weight, runtime, verbose, plotenabled),
@@ -254,7 +255,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
 
                     if verbose:
                         print(
-                        "---------- Found A[{0}]={1}".format(row, x0) + " at loops " + str(fval) + " after " + str(
+                        "---------- Found A[{0}]={1}".format(row, x0) + " at updates " + str(fval) + " after " + str(
                             numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N))
 
                     # Optimize dT next
@@ -283,7 +284,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
 
                     if verbose:
                         print(
-                        "---------- Found dT[{0}]={1}".format(row, x0) + " at loops " + str(fval) + " after " + str(
+                        "---------- Found dT[{0}]={1}".format(row, x0) + " at updates " + str(fval) + " after " + str(
                             numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N))
 
             # if var == dT or A
@@ -296,7 +297,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
                 elif var == "A":
                     varvector, othervector = A, dT
 
-                    lbound, ubound = getABounds(bins, row, varvector)
+                    lbound, ubound = getBounds(bins, row, varvector)
 
                 x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(
                 row, np.delete(varvector, row), tag, datfile, trials, othervector, weight, runtime, verbose, plotenabled),
@@ -325,7 +326,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
 
                 if verbose:
                     print(
-                    "---------- Found {0}[{1}]={2}".format(var, row, x0) + " at loops " + str(fval) + " after " + str(
+                    "---------- Found {0}[{1}]={2}".format(var, row, x0) + " at updates " + str(fval) + " after " + str(
                         numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N))
 
             if email:
@@ -333,8 +334,8 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
                 msg += "Time spent so far: " + str(datetime.datetime.now() - start) + '\n'
                 sendEmail(msg)
     if verbose:
-        # Print the best loops
-        print("Best # loops: " + str(fmin))
+        # Print the best updates
+        print("Best # updates: " + str(fmin))
     if plotenabled:
         if var == 'dT':
             t = np.cumsum(varmin)
@@ -363,11 +364,11 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
         if var == "both":
             msg = "Optimization finished after " + str(datetime.datetime.now() - start) + \
                   ", at " + datetime.datetime.now().strftime("%a %d/%m/%y %H:%M:%S") + \
-                  "!\nOptimal dT: {0}\nOptimal A: {1}\nOptimum # loops: {2}\n".format(dTmin, Amin, fmin)
+                  "!\nOptimal dT: {0}\nOptimal A: {1}\nOptimum # updates: {2}\n".format(dTmin, Amin, fmin)
         else:
             msg = "Optimization finished after " + str(datetime.datetime.now() - start) + \
                   ", at " + datetime.datetime.now().strftime("%a %d/%m/%y %H:%M:%S") + \
-                  "!\nOptimal " + var + ": " + str(varmin) + "\nOptimum # loops: " + str(fmin) + "\n"
+                  "!\nOptimal " + var + ": " + str(varmin) + "\nOptimum # updates: " + str(fmin) + "\n"
         sendEmail(msg)
 
     return fmin
