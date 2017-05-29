@@ -10,6 +10,7 @@
 #include <math.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include "macros.h"
 #include "bitstring.h"
 #include "sat.h"
@@ -224,7 +225,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
   printf("c Input: %s\n", argv[2]);
 
   if ( (fp = fopen(argv[1], "r")) == NULL ){
-    fprintf(stderr,"Could not open file %s\n",argv[1]);
+    fprintf(stderr,"Could not open file %s, error: %s\n",argv[1],strerror(errno));
     return IO_ERROR;
   }
 
@@ -237,7 +238,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
   fclose(fp);
 
   if ( (fp = fopen(argv[2], "r")) == NULL ){
-    fprintf(stderr,"Could not open file %s\n",argv[2]);
+    fprintf(stderr,"Could not open file %s, error: %s\n",argv[2], strerror(errno));
     return IO_ERROR;
   }
   
