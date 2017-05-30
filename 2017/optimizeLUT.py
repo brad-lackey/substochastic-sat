@@ -75,7 +75,7 @@ def tryLUT(tag, filename, trials, dT, A, weight=None, runtime=None, plotenabled=
 
     # returns 0 if successful otherwise throws error
     try:
-        check_call(args, timeout=10)
+        check_call(args)
     except TimeoutExpired:
         return UPDATE_PENALTY
 
@@ -113,7 +113,7 @@ def sendEmail(msg):
     server.quit()
 
 
-def getBounds(bins, row, varvector):
+def getABounds(bins, row, varvector):
     if row == 0 or row == bins - 1:
         if row == 0:
             diff = BOUND_MULTIPLIER * abs(varvector[row + 1] - varvector[row])
@@ -196,8 +196,19 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
     bins, dT, A = parseLUT(lutfile)
     # Minimize var
     if var == 'dT':
-        f = lambda x1, i, x2, a1, a2, a3, a4, a5, a6, v, p: tryLUT(a1, a2, a3, np.insert(x2, i, x1), a4, a5,
-                                                             a6, verbose=v, plotenabled=p)  # rearranging the arguments for dT
+        def f(edge, edgeI, tag, filename, trials, dT, A, weight=None, runtime=None, plotenabled=False, verbose=False):
+            edges = np.insert(np.cumsum(dT), 0, 0)
+
+            edges[edgeI+1] = edge
+
+            dT = np.diff(edges)
+
+            # print(np.sum(dT))
+
+            return tryLUT(tag, filename, trials, dT, A, weight, runtime, plotenabled, verbose)
+
+        # f = lambda x1, i, x2, a1, a2, a3, a4, a5, a6, v, p: tryLUT(a1, a2, a3, np.insert(x2, i, x1), a4, a5,
+        #                                                      a6, verbose=v, plotenabled=p)  # rearranging the arguments for dT
     elif var == 'A':
         f = lambda x1, i, x2, a1, a2, a3, a4, a5, a6, v, p: tryLUT(a1, a2, a3, a4, np.insert(x2, i, x1), a5,
                                                              a6, verbose=v, plotenabled=p)  # rearranging the arguments for A
@@ -232,7 +243,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
                     # Optimize A first
                     varvector, othervector = A, dT
 
-                    lbound, ubound = getBounds(bins, row, varvector)
+                    lbound, ubound = getABounds(bins, row, varvector)
 
                     x0, fval, ierr, numfunc = fminbound(f_A, lbound, ubound, args=(
                     row, np.delete(varvector, row), tag, datfile, trials, othervector, weight, runtime, verbose, plotenabled),
@@ -291,26 +302,39 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
             else:
 
                 if var == "dT":
+                    # skip for the last edge
+                    if row == bins-1:
+                        continue
+
                     varvector, othervector = dT, A
 
-                    lbound, ubound = 0.1, 2.0
+                    edges = np.insert(np.cumsum(dT), 0, 0)
+
+                    lbound, ubound = edges[row], edges[row+2]
+
+                    x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(
+                        row, tag, datfile, trials, varvector, othervector, weight, runtime, verbose, plotenabled),
+                                                        full_output=True, xtol=0.01)
+
+                    edges[row+1] = x0
+
+                    dT = np.diff(edges)
+                    varvector = dT
+
                 elif var == "A":
                     varvector, othervector = A, dT
 
-                    lbound, ubound = getBounds(bins, row, varvector)
+                    lbound, ubound = getABounds(bins, row, varvector)
 
-                x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(
-                row, np.delete(varvector, row), tag, datfile, trials, othervector, weight, runtime, verbose, plotenabled),
-                                                    full_output=True, xtol=0.01)
-                varvector[row] = x0
+                    x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(
+                    row, np.delete(varvector, row), tag, datfile, trials, othervector, weight, runtime, verbose, plotenabled),
+                                                        full_output=True, xtol=0.01)
+                    varvector[row] = x0
 
                 if fval < fmin:
                     fmin = fval
 
-                    if var == "dT":
-                        varmin = dT.copy()
-                    else:
-                        varmin = A.copy()
+                    varmin = varvector.copy()
 
                     printf(fmin)
 
