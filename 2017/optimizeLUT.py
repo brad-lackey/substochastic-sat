@@ -174,7 +174,7 @@ def main():
             runtime = args[7]
 
     else:
-        print("Usage: ./optimizeLUT dT|A|both [-v] [-m] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
+        print("Usage: ./optimizeLUT dT|A|both [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
         return 1
 
     optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=email, verbose=verbose, plotenabled=plotenabled)
@@ -196,7 +196,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
     bins, dT, A = parseLUT(lutfile)
     # Minimize var
     if var == 'dT':
-        def f(edge, edgeI, tag, filename, trials, dT, A, weight=None, runtime=None, plotenabled=False, verbose=False):
+        def f(edge, edgeI, tag, filename, trials, dT, A, weight, runtime):
             edges = np.insert(np.cumsum(dT), 0, 0)
 
             edges[edgeI+1] = edge
@@ -313,7 +313,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
                     lbound, ubound = edges[row], edges[row+2]
 
                     x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(
-                        row, tag, datfile, trials, varvector, othervector, weight, runtime, verbose, plotenabled),
+                        row, tag, datfile, trials, varvector, othervector, weight, runtime),
                                                         full_output=True, xtol=0.01)
 
                     edges[row+1] = x0
