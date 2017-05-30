@@ -2,7 +2,7 @@
 
 $queue_size = 4;
 
-(scalar(@ARGV) == 5) or (scalar(@ARGV) == 7) or die "Usage: ./testrun.pl command <LUT.txt> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n";
+(scalar(@ARGV) == 5) or (scalar(@ARGV) == 6) or (scalar(@ARGV) == 8) or die "Usage: ./testrun.pl command <LUT.txt> <filelist.dat> trials tag [seed [\"step weight\" \"runtime\"]]\n";
 
 # Just to be completely clear:
 $command = $ARGV[0];
@@ -10,8 +10,16 @@ $lut = $ARGV[1];
 $filelist = $ARGV[2];
 $trials = $ARGV[3];
 $tag = $ARGV[4];
-$weight = $ARGV[5];
-$runtime = $ARGV[6];
+$seed = $ARGV[5];
+$weight = $ARGV[6];
+$runtime = $ARGV[7];
+
+if($seed eq "")
+{
+    $seed = int(rand(1000))
+}
+
+printf "SEED: %d..%d, QUEUE_SIZE: %d\n", $seed, $seed+$trials, $queue_size;
 
 # Load int the data file and create the list of all jobs.
 open(DAT, "<$filelist");
@@ -21,7 +29,7 @@ while(<DAT>){
     my $file = $a[0];
     my $optimal = $a[3];
     my $besttime = $a[6];
-    for (my $t = 0; $t < $trials; $t += 1){
+    for (my $t = $seed; $t < $seed+$trials; $t += 1){
         push(@stack, $command . " $lut $file $optimal $t $weight $runtime");
     }
     $opt{$a[0]} = $optimal;
@@ -65,6 +73,7 @@ while ( scalar(@stack) > 0 ){
                 $time = $c[2];
                 $loops = $c[4];
                 $updates = $c[6];
+                # print "$c[1] $c[2] $c[3] $c[4] $c[5] $c[6]\n"
             }
         }
         
