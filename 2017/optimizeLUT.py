@@ -161,21 +161,23 @@ def main():
     if '-p' in args:
         plotenabled = True
         args.remove('-p')
-    if len(args) == 6 or len(args) == 8:
+    if len(args) == 7 or len(args) == 9:
         var = args[1]
-        lutfile = args[2]
-        datfile = args[3]
-        trials = args[4]
-        tag = args[5]
+        global xpmt
+        xpmt = int(args[2])
+        lutfile = args[3]
+        datfile = args[4]
+        trials = args[5]
+        tag = args[6]
         weight = None
         runtime = None
 
-        if len(args) == 8:
-            weight = args[6]
-            runtime = args[7]
+        if len(args) == 9:
+            weight = args[7]
+            runtime = args[8]
 
     else:
-        print("Usage: ./optimizeLUT dT|A|both [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
+        print("Usage: ./optimizeLUT dT|A|both <experiment_type (0:fwd/bwd, 1:2 rnd, 2:2 no-cons rnd)> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
         return 1
 
     optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=email, verbose=verbose, plotenabled=plotenabled)
@@ -229,16 +231,22 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
             sendEmail(msg)
 
     # Loop through each index of dT and minimize accordingly
-    fmin = 10000
+    fmin = 1000000
     varmin = -1
-    indices = np.arange(bins)
+
+    if xpmt == 0:
+        indices = np.concatenate((np.arange(bins), np.arange(bins-1)[::-1]))  # [0 1 2 .. bins .. 2 1 0]
+    else:
+        indices = np.concatenate(np.arange(bins), np.arange(bins))
+
     # i -> iteration
     for i in range(N_ITERS):
         fval = 0
-        np.random.shuffle(indices)  # shuffles the indices array for random choice of index to optimize
-        j = 0
+
+        if xpmt != 0:
+            np.random.shuffle(indices)  # shuffles the indices array for random choice of index to optimize
+
         for row in indices:
-            j += 1
 
             if var == "both":
                 for n in range(3):
