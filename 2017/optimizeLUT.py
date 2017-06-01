@@ -204,7 +204,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
     bins, dT, A = parseLUT(lutfile)
     # Minimize var
     if var == 'dT':
-        if xpmt != 2:
+        if xpmt == 1:
             def f(edge, edgeI, tag, filename, trials, dT, A, weight, runtime):
                 edges = np.insert(np.cumsum(dT), 0, 0)
 
@@ -319,7 +319,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
 
                 if var == "dT":
 
-                    if xpmt != 2:
+                    if xpmt == 1:
                         # skip for the last edge
                         if row == bins-1:
                             continue
