@@ -165,6 +165,11 @@ def main():
         var = args[1]
         global xpmt
         xpmt = int(args[2])
+
+        if xpmt < 0 or xpmt > 2:
+            print("Usage: ./optimizeLUT dT|A|both <experiment_type (0:fwd/bwd, 1:2 rnd, 2:2 no-cons rnd)> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
+            return 1
+
         lutfile = args[3]
         datfile = args[4]
         trials = args[5]
@@ -177,7 +182,7 @@ def main():
             runtime = args[8]
 
     else:
-        print("Usage: ./optimizeLUT dT|A|both <experiment_type (0:fwd/bwd, 1:2 rnd, 2:2 no-cons rnd)> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
+        print("Usage: ./optimizeLUT dT|A|both <experiment_type> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
         return 1
 
     optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=email, verbose=verbose, plotenabled=plotenabled)
@@ -199,19 +204,20 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
     bins, dT, A = parseLUT(lutfile)
     # Minimize var
     if var == 'dT':
-        def f(edge, edgeI, tag, filename, trials, dT, A, weight, runtime):
-            edges = np.insert(np.cumsum(dT), 0, 0)
+        if xpmt != 2:
+            def f(edge, edgeI, tag, filename, trials, dT, A, weight, runtime):
+                edges = np.insert(np.cumsum(dT), 0, 0)
 
-            edges[edgeI+1] = edge
+                edges[edgeI+1] = edge
 
-            dT = np.diff(edges)
+                dT = np.diff(edges)
 
-            # print(np.sum(dT))
+                # print(np.sum(dT))
 
-            return tryLUT(tag, filename, trials, dT, A, weight, runtime, plotenabled, verbose)
-
-        # f = lambda x1, i, x2, a1, a2, a3, a4, a5, a6, v, p: tryLUT(a1, a2, a3, np.insert(x2, i, x1), a4, a5,
-        #                                                      a6, verbose=v, plotenabled=p)  # rearranging the arguments for dT
+                return tryLUT(tag, filename, trials, dT, A, weight, runtime, plotenabled, verbose)
+        else:
+            f = lambda x1, i, x2, a1, a2, a3, a4, a5, a6, v, p: tryLUT(a1, a2, a3, np.insert(x2, i, x1), a4, a5,
+                                                             a6, verbose=v, plotenabled=p)  # rearranging the arguments for dT
     elif var == 'A':
         f = lambda x1, i, x2, a1, a2, a3, a4, a5, a6, v, p: tryLUT(a1, a2, a3, a4, np.insert(x2, i, x1), a5,
                                                              a6, verbose=v, plotenabled=p)  # rearranging the arguments for A
@@ -237,7 +243,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
     if xpmt == 0:
         indices = np.concatenate((np.arange(bins), np.arange(bins-1)[::-1]))  # [0 1 2 .. bins .. 2 1 0]
     else:
-        indices = np.concatenate(np.arange(bins), np.arange(bins))
+        indices = np.concatenate((np.arange(bins), np.arange(bins)))
 
     # i -> iteration
     for i in range(N_ITERS):
@@ -312,24 +318,35 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
             else:
 
                 if var == "dT":
-                    # skip for the last edge
-                    if row == bins-1:
-                        continue
 
-                    varvector, othervector = dT, A
+                    if xpmt != 2:
+                        # skip for the last edge
+                        if row == bins-1:
+                            continue
 
-                    edges = np.insert(np.cumsum(dT), 0, 0)
+                        varvector, othervector = dT, A
 
-                    lbound, ubound = edges[row], edges[row+2]
+                        edges = np.insert(np.cumsum(dT), 0, 0)
 
-                    x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(
-                        row, tag, datfile, trials, varvector, othervector, weight, runtime),
-                                                        full_output=True, xtol=0.01)
+                        lbound, ubound = edges[row], edges[row+2]
 
-                    edges[row+1] = x0
+                        x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(
+                            row, tag, datfile, trials, varvector, othervector, weight, runtime),
+                                                            full_output=True, xtol=0.01)
 
-                    dT = np.diff(edges)
-                    varvector = dT
+                        edges[row+1] = x0
+
+                        dT = np.diff(edges)
+                        varvector = dT
+                    else:
+                        varvector, othervector = dT, A
+
+                        lbound, ubound = 0.1, 2.0
+
+                        x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(
+                            row, np.delete(varvector, row), tag, datfile, trials, othervector, weight, runtime, verbose, plotenabled),
+                                                            full_output=True, xtol=0.01)
+                        varvector[row] = x0
 
                 elif var == "A":
                     varvector, othervector = A, dT
