@@ -8,9 +8,10 @@ import matplotlib.pyplot as plt
 import smtplib
 import datetime
 
-BOUND_CAP = 0.1
-BOUND_MULTIPLIER = 1.1
-UPDATE_PENALTY = 100000
+BOUND_CAP = 0.1  # cap on the bounds
+BOUND_MULTIPLIER = 1.1  # fraction over which the bound can extend
+UPDATE_PENALTY = 100000  # penalty to give scripts which timeout
+N_ITERS = 1  # number of optimization iterations
 
 """Returns the dT and A vectors from a LUT file as a tuple"""
 def parseLUT(lutfile):
@@ -228,15 +229,16 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
             sendEmail(msg)
 
     # Loop through each index of dT and minimize accordingly
-    N = 10  # number of optimization iterations
-    fmin = 1000
+    fmin = 10000
     varmin = -1
     indices = np.arange(bins)
     # i -> iteration
-    for i in range(N):
+    for i in range(N_ITERS):
         fval = 0
         np.random.shuffle(indices)  # shuffles the indices array for random choice of index to optimize
+        j = 0
         for row in indices:
+            j += 1
 
             if var == "both":
                 for n in range(3):
@@ -261,13 +263,13 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
                         lut = tag + ".OPTIMAL." + var + ".txt"
                         makeLUT(lut, bins, dTmin, Amin)
 
-                        if verbose:
+                        if plotenabled:
                             plt.savefig(tag + ".OPTIMAL." + var + ".png")
 
                     if verbose:
                         print(
                         "---------- Found A[{0}]={1}".format(row, x0) + " at updates " + str(fval) + " after " + str(
-                            numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N))
+                            numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N_ITERS))
 
                     # Optimize dT next
                     varvector, othervector = dT, A
@@ -290,13 +292,13 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
                         lut = tag + ".OPTIMAL." + var + ".txt"
                         makeLUT(lut, bins, dTmin, Amin)
 
-                        if verbose:
+                        if plotenabled:
                             plt.savefig(tag + ".OPTIMAL." + var + ".png")
 
                     if verbose:
                         print(
                         "---------- Found dT[{0}]={1}".format(row, x0) + " at updates " + str(fval) + " after " + str(
-                            numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N))
+                            numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N_ITERS))
 
             # if var == dT or A
             else:
@@ -345,18 +347,18 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
                     else:
                         makeLUT(lut, bins, dT, varmin)
 
-                    if verbose:
+                    if plotenabled:
                         plt.savefig(tag + ".OPTIMAL." + var + ".png")
 
                 if verbose:
                     print(
                     "---------- Found {0}[{1}]={2}".format(var, row, x0) + " at updates " + str(fval) + " after " + str(
-                        numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N))
+                        numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N_ITERS))
 
-            if email:
-                msg = "Progress: {0}/{1}".format(i + 1, N) + "\n"
-                msg += "Time spent so far: " + str(datetime.datetime.now() - start) + '\n'
-                sendEmail(msg)
+        if email:
+            msg = "Progress: {0}/{1} iterations complete.".format(i+1, N_ITERS) + "\n"
+            msg += "Time spent so far: " + str(datetime.datetime.now() - start) + '\n'
+            sendEmail(msg)
     if verbose:
         # Print the best updates
         print("Best # updates: " + str(fmin))
