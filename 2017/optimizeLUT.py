@@ -11,7 +11,7 @@ import datetime
 BOUND_CAP = 0.1  # cap on the bounds
 BOUND_MULTIPLIER = 1.1  # fraction over which the bound can extend
 UPDATE_PENALTY = 100000  # penalty to give scripts which timeout
-N_ITERS = 1  # number of optimization iterations
+N_ITERS_CAP = 5  # max number of optimization iterations
 
 """Returns the dT and A vectors from a LUT file as a tuple"""
 def parseLUT(lutfile):
@@ -182,7 +182,7 @@ def main():
             runtime = args[8]
 
     else:
-        print("Usage: ./optimizeLUT dT|A|both <experiment_type> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
+        print("Usage: ./optimizeLUT dT|A|both <experiment_type (0:fwd/bwd, 1:2 rnd, 2:2 no-cons rnd)> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
         return 1
 
     optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=email, verbose=verbose, plotenabled=plotenabled)
@@ -237,8 +237,16 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
             sendEmail(msg)
 
     # Loop through each index of dT and minimize accordingly
-    fmin = 1000000
-    varmin = -1
+
+    # set initial minimum to initial LUT performance
+    fmin = tryLUT(tag, datfile, trials, dT, A, weight, runtime, plotenabled, verbose)
+
+    if var == 'dT':
+        varmin = dT.copy()
+    elif var == 'A':
+        varmin = A.copy()
+    else:
+        varmin = "starting values"
 
     if xpmt == 0:
         indices = np.concatenate((np.arange(bins), np.arange(bins-1)[::-1]))  # [0 1 2 .. bins .. 2 1 0]
@@ -246,11 +254,13 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
         indices = np.concatenate((np.arange(bins), np.arange(bins)))
 
     # i -> iteration
-    for i in range(N_ITERS):
+    for i in range(N_ITERS_CAP):
         fval = 0
 
         if xpmt != 0:
             np.random.shuffle(indices)  # shuffles the indices array for random choice of index to optimize
+
+        minFound = False
 
         for row in indices:
 
@@ -280,10 +290,12 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
                         if plotenabled:
                             plt.savefig(tag + ".OPTIMAL." + var + ".png")
 
+                        minFound = True
+
                     if verbose:
                         print(
                         "---------- Found A[{0}]={1}".format(row, x0) + " at updates " + str(fval) + " after " + str(
-                            numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N_ITERS))
+                            numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N_ITERS_CAP))
 
                     # Optimize dT next
                     varvector, othervector = dT, A
@@ -309,10 +321,12 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
                         if plotenabled:
                             plt.savefig(tag + ".OPTIMAL." + var + ".png")
 
+                        minFound = True
+
                     if verbose:
                         print(
                         "---------- Found dT[{0}]={1}".format(row, x0) + " at updates " + str(fval) + " after " + str(
-                            numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N_ITERS))
+                            numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N_ITERS_CAP))
 
             # if var == dT or A
             else:
@@ -375,15 +389,24 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, email=False
                     if plotenabled:
                         plt.savefig(tag + ".OPTIMAL." + var + ".png")
 
+                    minFound = True
+
                 if verbose:
                     print(
                     "---------- Found {0}[{1}]={2}".format(var, row, x0) + " at updates " + str(fval) + " after " + str(
-                        numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N_ITERS))
+                        numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N_ITERS_CAP))
 
         if email:
-            msg = "Progress: {0}/{1} iterations complete.".format(i+1, N_ITERS) + "\n"
+            msg = "Progress: {0}/{1} iterations complete.".format(i + 1, N_ITERS_CAP) + "\n"
             msg += "Time spent so far: " + str(datetime.datetime.now() - start) + '\n'
             sendEmail(msg)
+
+
+        if not minFound:
+            print("No changes detected. Breaking out of loop...")
+            msg = "Optimization converged at {0}, with {1}={2}".format(fmin, var, varmin)
+            sendEmail(msg)
+            break
     if verbose:
         # Print the best updates
         print("Best # updates: " + str(fmin))
