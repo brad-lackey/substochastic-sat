@@ -194,10 +194,10 @@ if __name__ == "__main__":
         return results
 
 
-    def bruteOptimize(index, A, queue):
+    def bruteOptimize(index, A, lock):
         fulltag = tag + "." + str(index)
 
-        lut = fulltag + ".LUT." + str(bins) + ".txt"
+        lut = fulltag + ".LUT.txt"
 
         makeLUT(lut, bins, dT, A)
 
@@ -230,7 +230,7 @@ if __name__ == "__main__":
 
         saveProgress(progfile, index)
 
-        updateResults(index, updates, timeout, queue)
+        updateResults(index, updates, timeout, lock)
 
         if verbosity > 1:
             print("Job {0}/{1} Done".format(index+1, len(A_list)))
