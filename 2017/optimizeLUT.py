@@ -193,43 +193,19 @@ def main():
 
 
 def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_level=0, email=False, verbose=False, plotenabled=False):
-    if recursion_level == 0 and plotenabled:
-        # Turn on interactive plotting
-        plt.ion()
-    if verbose:
-        start = datetime.datetime.now()
-        print("########## STARTING OPTIMIZATION - " + datetime.datetime.now().strftime(
-            "%a %d/%m/%y %H:%M:%S") + " ##########")
+    if recursion_level == 0:
+        if plotenabled:
+            # Turn on interactive plotting
+            plt.ion()
+        if verbose:
+            start = datetime.datetime.now()
+            print("########## STARTING OPTIMIZATION - " + datetime.datetime.now().strftime(
+                "%a %d/%m/%y %H:%M:%S") + " ##########")
 
     # Load initial conditions for dT and A
     bins, dT, A = parseLUT(lutfile)
 
-    # Minimize var
-    if var == 'dT':
-        if xpmt == 1:
-            def f(edge, edgeI, tag, filename, trials, dT, A, weight, runtime):
-                edges = np.insert(np.cumsum(dT), 0, 0)
-
-                edges[edgeI+1] = edge
-
-                dT = np.diff(edges)
-
-                # print(np.sum(dT))
-
-                return tryLUT(tag, filename, trials, dT, A, weight, runtime, plotenabled, verbose)
-        else:
-            f = lambda x1, i, x2, a1, a2, a3, a4, a5, a6, v, p: tryLUT(a1, a2, a3, np.insert(x2, i, x1), a4, a5,
-                                                             a6, verbose=v, plotenabled=p)  # rearranging the arguments for dT
-    elif var == 'A':
-        f = lambda x1, i, x2, a1, a2, a3, a4, a5, a6, v, p: tryLUT(a1, a2, a3, a4, np.insert(x2, i, x1), a5,
-                                                             a6, verbose=v, plotenabled=p)  # rearranging the arguments for A
-    elif var == 'both':
-        f_A = lambda x1, i, x2, a1, a2, a3, a4, a5, a6, v, p: tryLUT(a1, a2, a3, a4, np.insert(x2, i, x1), a5,
-                                                               a6, verbose=v, plotenabled=p)  # rearranging the arguments for A
-        f_dT = lambda x1, i, x2, a1, a2, a3, a4, a5, a6, v, p: tryLUT(a1, a2, a3, np.insert(x2, i, x1), a4, a5,
-                                                                a6, verbose=v, plotenabled=p)  # rearranging the arguments for dT
-    else:
-        raise Exception("Invalid variable argument! Must be \"dT\", \"A\" or \"both\"")
+    f = getMinimizer(var)
 
     def printf(fval):
         if verbose:
@@ -248,92 +224,26 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
         varmin = dT.copy()
     elif var == 'A':
         varmin = A.copy()
-    else:
-        varmin = "starting values"
 
     if xpmt == 0:
         indices = np.concatenate((np.arange(bins), np.arange(bins-1)[::-1]))  # [0 1 2 .. bins-1 .. 2 1 0]
     else:
         indices = np.concatenate((np.arange(bins), np.arange(bins)))
 
-    # i -> iteration
-    for i in range(N_ITERS_CAP):
-        fval = 0
+    if var != "both":
 
-        if xpmt != 0:
-            np.random.shuffle(indices)  # shuffles the indices array for random choice of index to optimize
+        newLUT = False
 
-        minFound = False
+        # i -> iteration
+        for i in range(N_ITERS_CAP):
+            fval = 0
 
-        for row in indices:
+            if xpmt != 0:
+                np.random.shuffle(indices)  # shuffles the indices array for random choice of index to optimize
 
-            if var == "both":
-                for n in range(3):
-                    # Optimize A first
-                    varvector, othervector = A, dT
+            minFound = False
 
-                    lbound, ubound = getABounds(bins, row, varvector)
-
-                    x0, fval, ierr, numfunc = fminbound(f_A, lbound, ubound, args=(
-                    row, np.delete(varvector, row), tag, datfile, trials, othervector, weight, runtime, verbose, plotenabled),
-                                                        full_output=True, xtol=0.01)
-                    varvector[row] = x0
-
-                    if fval < fmin:
-                        fmin = fval
-
-                        Amin, dTmin = A.copy(), dT.copy()
-
-                        printf(fmin)
-
-                        # Store the best var
-                        lut = tag + ".OPTIMAL." + var + ".txt"
-                        makeLUT(lut, bins, dTmin, Amin)
-
-                        if plotenabled:
-                            plt.savefig(tag + ".OPTIMAL." + var + ".png")
-
-                        minFound = True
-
-                    if verbose:
-                        print(
-                        "---------- Found A[{0}]={1}".format(row, x0) + " at updates " + str(fval) + " after " + str(
-                            numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N_ITERS_CAP))
-
-                    # Optimize dT next
-                    varvector, othervector = dT, A
-
-                    lbound, ubound = 0.1, 2.0
-
-                    x0, fval, ierr, numfunc = fminbound(f_dT, lbound, ubound, args=(
-                    row, np.delete(varvector, row), tag, datfile, trials, othervector, weight, runtime, verbose, plotenabled),
-                                                        full_output=True, xtol=0.01)
-                    varvector[row] = x0
-
-                    if fval < fmin:
-                        fmin = fval
-
-                        Amin, dTmin = A.copy(), dT.copy()
-
-                        printf(fmin)
-
-                        # Store the best var
-                        lut = tag + ".OPTIMAL." + var + ".txt"
-                        makeLUT(lut, bins, dTmin, Amin)
-
-                        if plotenabled:
-                            plt.savefig(tag + ".OPTIMAL." + var + ".png")
-
-                        minFound = True
-
-                    if verbose:
-                        print(
-                        "---------- Found dT[{0}]={1}".format(row, x0) + " at updates " + str(fval) + " after " + str(
-                            numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N_ITERS_CAP))
-
-            # if var == dT or A
-            else:
-
+            for row in indices:
                 if var == "dT":
 
                     if xpmt == 1:
@@ -392,82 +302,74 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                     if plotenabled:
                         plt.savefig(tag + ".OPTIMAL." + var + ".png")
 
-                    minFound = True
+                    newLUT = minFound = True
 
                 if verbose:
                     print(
                     "---------- Found {0}[{1}]={2}".format(var, row, x0) + " at updates " + str(fval) + " after " + str(
                         numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N_ITERS_CAP))
 
-        if email:
-            msg = "Progress: {0}/{1} iterations complete.".format(i + 1, N_ITERS_CAP) + "\n"
-            msg += "Time spent so far: " + str(datetime.datetime.now() - start) + '\n'
-            sendEmail(msg)
+            if email:
+                msg = "Progress: {0}/{1} iterations complete.".format(i + 1, N_ITERS_CAP) + "\n"
+                msg += "Time spent so far: " + str(datetime.datetime.now() - start) + '\n'
+                sendEmail(msg)
 
-        if not minFound:
-            print("No changes detected. Breaking out of loop...")
-            msg = "Optimization converged at {0}, with {1}={2}".format(fmin, var, varmin)
-            sendEmail(msg)
+            if not minFound:
+                print("No changes detected. Breaking out of loop...")
+                msg = "Optimization converged at {0}, with {1}={2}".format(fmin, var, varmin)
+                sendEmail(msg)
 
-            if varmin == "starting values":
-                if var == "dT":
-                    dT = varmin
-                elif var == "A":
-                    A = varmin
-                else:
-                    dT = dTmin
-                    A = Amin
+                if not newLUT:
+                    return fmin, dT, A
+                break
 
-                return fmin, dT, A
-            break
+    else:
+        first_loop = True
+        while True:
+            lut = tag + ".LUT.txt"
+            if first_loop:
+                fmin1, new_dT, new_A = optimizeLUT('A', lutfile, datfile, trials, tag, weight, runtime,
+                                                   recursion_level=0, email=email, verbose=verbose,
+                                                   plotenabled=plotenabled)
+                first_loop = False
+            else:
+                fmin1, new_dT, new_A = optimizeLUT('A', lut, datfile, trials, tag, weight, runtime,
+                                                   recursion_level=0, email=email, verbose=verbose,
+                                                   plotenabled=plotenabled)
 
-    # --------------- Branch out the resultant LUT -----------------
-    print("Finished analysis of level {0}".format(recursion_level))
+            makeLUT(lut, bins, new_dT, new_A)
 
-    # Get the best var
-    lut = tag + ".OPTIMAL." + var + ".txt"
-    bins, dT, A = parseLUT(lut)
-    # split dT's largest bin in half
-    maxBin = dT.max()
-    maxI = dT.argmax()
-    dT[maxI] = maxBin / 2.0
-    dT = np.insert(dT, maxI, maxBin / 2.0)
-    A = np.insert(A, maxI, A[maxI])
+            fmin2, new_dT, new_A = optimizeLUT('dT', lut, datfile, trials, tag, weight, runtime,
+                                              recursion_level=0, email=email, verbose=verbose,
+                                              plotenabled=plotenabled)
 
-    lut = lut.rstrip(".txt") + "." + str(recursion_level) + ".txt"
-    makeLUT(lut, bins+1, dT, A)
+            makeLUT(lut, bins, new_dT, new_A)
 
-    print("Recursing down to level {0}...".format(recursion_level + 1))
-    fmin, dT, A = optimizeLUT(var, lut, datfile, trials, tag, weight, runtime, recursion_level=recursion_level+1, email=email, verbose=verbose, plotenabled=plotenabled)
-    # ------------- Finish branch code ----------------
+            if fmin1 > fmin and fmin2 > fmin:
+                # if it cannot improve it past the fmin, break the loop
+                break
+            else:
+                fmin = min([fmin1, fmin2])
 
-    if var == 'dT':
-        varmin = dT.copy()
-    elif var == 'both':
-        dTmin = dT.copy()
-
-    print("dT={0}\nA={1}".format(dT, A))
+    if var == "both":
+        lut = tag + ".LUT.txt"
+        fmin, dT, A = branchLUT(lut, tag, datfile, trials, weight, runtime, recursion_level, email, plotenabled, verbose)
+        print("dT={0}\nA={1}".format(dT, A))
+    elif var == 'A':
+        A = varmin.copy()
+    else:
+        dT = varmin.copy()
 
     if recursion_level == 0:
         if verbose:
             # Print the best updates
             print("Best # updates: " + str(fmin))
         if plotenabled:
-            if var == 'dT':
-                t = np.cumsum(varmin)
-            elif var == 'both':
-                t = np.cumsum(dTmin)
-            else:
-                t = np.cumsum(dT)
+            t = np.cumsum(dT)
 
             t = t - np.ediff1d(t, to_begin=t[0]) / 2.0  # staggers the time so that it falls in between the bins
 
-            if var == 'A':
-                plt.plot(t, varmin)
-            elif var == 'both':
-                plt.plot(t, Amin)
-            else:
-                plt.plot(t, A)
+            plt.plot(t, A)
 
             plt.ylabel("A-Values")
             plt.xlabel("Time")
@@ -487,11 +389,53 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                       "!\nOptimal " + var + ": " + str(varmin) + "\nOptimum # updates: " + str(fmin) + "\n"
             sendEmail(msg)
 
-
-
-
     return fmin, dT, A
 
+
+def getMinimizer(var):
+    # Minimize var
+    if var == 'dT':
+        if xpmt == 1:
+            def f(edge, edgeI, tag, filename, trials, dT, A, weight, runtime):
+                edges = np.insert(np.cumsum(dT), 0, 0)
+
+                edges[edgeI + 1] = edge
+
+                dT = np.diff(edges)
+
+                return tryLUT(tag, filename, trials, dT, A, weight, runtime, plotenabled, verbose)
+        else:
+            f = lambda x1, i, x2, a1, a2, a3, a4, a5, a6, v, p: tryLUT(a1, a2, a3, np.insert(x2, i, x1), a4, a5,
+                                                                       a6, verbose=v,
+                                                                       plotenabled=p)  # rearranging the arguments for dT
+    elif var == 'A':
+        f = lambda x1, i, x2, a1, a2, a3, a4, a5, a6, v, p: tryLUT(a1, a2, a3, a4, np.insert(x2, i, x1), a5,
+                                                                   a6, verbose=v,
+                                                                   plotenabled=p)  # rearranging the arguments for A
+    elif var == 'both':
+        return None
+    else:
+        raise Exception("Invalid variable argument! Must be \"dT\", \"A\" or \"both\"")
+    return f
+
+
+def branchLUT(lut, tag, datfile, trials, weight, runtime, recursion_level, email, plotenabled, verbose):
+    # Get the best var
+    bins, dT, A = parseLUT(lut)
+    # split dT's largest bin in half
+    maxBin = dT.max()
+    maxI = dT.argmax()
+    dT[maxI] = maxBin / 2.0
+    dT = np.insert(dT, maxI, maxBin / 2.0)
+    A = np.insert(A, maxI, A[maxI])
+
+    lut = lut.rstrip(".txt") + "." + str(recursion_level) + ".txt"
+    makeLUT(lut, bins + 1, dT, A)
+
+    print("Recursing down to level {0}...".format(recursion_level + 1))
+
+    return optimizeLUT("both", lut, datfile, trials, tag, weight, runtime, recursion_level=recursion_level + 1,
+                              email=email, verbose=verbose, plotenabled=plotenabled)
 
 
 if __name__ == "__main__":
