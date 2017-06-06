@@ -324,37 +324,46 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                 break
 
     else:
-        first_loop = True
+        fmin1 = 1000000
+        fmin2 = 1000000
+
+        changedLUT = False
+
+        lut = tag + ".LUT.txt"
+        makeLUT(lut, bins, dT, A)
+
         while True:
-            lut = tag + ".LUT.txt"
-            if first_loop:
-                fmin1, new_dT, new_A = optimizeLUT('A', lutfile, datfile, trials, tag, weight, runtime,
-                                                   recursion_level=0, email=email, verbose=verbose,
-                                                   plotenabled=plotenabled)
-                first_loop = False
-            else:
-                fmin1, new_dT, new_A = optimizeLUT('A', lut, datfile, trials, tag, weight, runtime,
-                                                   recursion_level=0, email=email, verbose=verbose,
+
+            fmin1, new_dT, new_A = optimizeLUT('A', lut, datfile, trials, tag, weight, runtime,
+                                                   recursion_level=recursion_level, email=email, verbose=verbose,
                                                    plotenabled=plotenabled)
 
-            makeLUT(lut, bins, new_dT, new_A)
+            if fmin1 < fmin2 and fmin1 < fmin:
+                makeLUT(lut, bins, new_dT, new_A)
+                changedLUT = True
 
             fmin2, new_dT, new_A = optimizeLUT('dT', lut, datfile, trials, tag, weight, runtime,
-                                              recursion_level=0, email=email, verbose=verbose,
-                                              plotenabled=plotenabled)
+                                               recursion_level=recursion_level, email=email, verbose=verbose,
+                                               plotenabled=plotenabled)
 
-            makeLUT(lut, bins, new_dT, new_A)
+            if fmin2 < fmin1 and fmin2 < fmin:
+                makeLUT(lut, bins, new_dT, new_A)
+                changedLUT = True
 
             if fmin1 > fmin and fmin2 > fmin:
-                # if it cannot improve it past the fmin, break the loop
-                break
+                if changedLUT:
+                    # if it cannot improve it past the fmin, save the best schedule and break the loop
+                    break
+                else:
+                    # if it hasn't improved the given schedule at all, return and break out of the recursion...our job
+                    #  is done.
+                    return fmin, dT, A
             else:
                 fmin = min([fmin1, fmin2])
 
     if var == "both":
         lut = tag + ".LUT.txt"
         fmin, dT, A = branchLUT(lut, tag, datfile, trials, weight, runtime, recursion_level, email, plotenabled, verbose)
-        print("dT={0}\nA={1}".format(dT, A))
     elif var == 'A':
         A = varmin.copy()
     else:
@@ -433,6 +442,7 @@ def branchLUT(lut, tag, datfile, trials, weight, runtime, recursion_level, email
     makeLUT(lut, bins + 1, dT, A)
 
     print("Recursing down to level {0}...".format(recursion_level + 1))
+    print("dT={0}\nA={1}".format(dT, A))
 
     return optimizeLUT("both", lut, datfile, trials, tag, weight, runtime, recursion_level=recursion_level + 1,
                               email=email, verbose=verbose, plotenabled=plotenabled)
