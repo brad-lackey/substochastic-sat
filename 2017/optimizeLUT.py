@@ -324,8 +324,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                 break
 
     else:
-        fmin1 = 1000000
-        fmin2 = 1000000
+        fmin1 = fmin2 = fmin
 
         changedLUT = False
 
