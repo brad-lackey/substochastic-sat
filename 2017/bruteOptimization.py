@@ -68,7 +68,10 @@ if __name__ == "__main__":
 
     datfile = args[1]
     # construct tag from datfile title
-    tag = datfile.split('/')[-1].rstrip(".dat")
+    if datfile.endswith(".dat"):
+        tag = datfile.split('/')[-1][:-4]
+    else:
+        tag = datfile.split('/')[-1]
     progfile = tag + ".PROGRESS.txt"
 
     # get finished indices
