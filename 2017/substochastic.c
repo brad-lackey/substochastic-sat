@@ -105,6 +105,7 @@ int main(int argc, char **argv){
       a *= weight;
 
 // Can readjust population size according to schedule here.
+      reallocatePopulation(pop, lut->psizes[time_index], parity);
       
 //      printf("%u: %lf, %lf\n", time_index, lut->times[time_index], lut->vals[time_index]);
 

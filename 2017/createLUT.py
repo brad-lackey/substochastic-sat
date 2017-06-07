@@ -6,14 +6,15 @@ def make_tuple(s, d_type):
     return map(d_type, tuple(s[1:-1].split(',')))
 
 # create the LUT table
-def makeLUT(filename, bins, dT, A):
+def makeLUT(filename, bins, dT, A, psize):
     dT = map(str, dT)
     A = map(str, A)
+    psize = map(str, psize)
 
     with open(filename, 'w') as f:
         f.write(str(bins) + '\n')
         for i in range(bins):
-            f.write(dT[i] + '\t' + A[i] + '\n')
+            f.write(dT[i] + '\t' + A[i] + '\t' + psize[i] + '\n')
 
 def main():
 
@@ -50,7 +51,13 @@ def main():
             val0, valN = make_tuple(raw_input(), float) # keep val as a float for calculation
 
         if cmd_line:
-            bins = int(sys.argv[6])
+            psize = int(sys.argv[6])
+        else:
+            print("Enter the uniform population size:")
+            psize = int(raw_input())
+
+        if cmd_line:
+            bins = int(sys.argv[7])
         else:
             print("Enter # Bins:")
             bins = int(raw_input())
@@ -59,9 +66,11 @@ def main():
 
         A = [val0]
         dT = [dT]
+        psize = [psize]
         for i in range(bins - 1):
             dT.append(dT[0])
             A.append(val0 + (i+1)*deltaA)
+            psize.append(psize[0])
 
     elif mode is 1:
         if cmd_line:
@@ -126,10 +135,38 @@ def main():
                     input_valid = False
                     print("Invalid number of entries!")
 
+        input_valid = False
+
+        psize = []
+        while not input_valid:
+            if cmd_line:
+                psize = sys.argv[4+bins+bins:4+bins+bins+bins]
+            else:
+                print("Enter population sizes (separated by spaces, if single, then uniform):")
+                psize = raw_input().split()
+
+            # float verification
+            map(int, psize)
+
+            if len(psize) == 1:
+                # copy first value to the whole list
+                for i in range(bins):
+                    psize.append(psize[0])
+                input_valid = True
+            elif len(psize) == bins:
+                # n-th value is n-th dT
+                input_valid = True
+            else:
+                if cmd_line:
+                    raise Exception("Invalid number of entries!")
+                else:
+                    input_valid = False
+                    print("Invalid number of entries!")
+
     else:
         raise Exception("Mode is not 0 or 1, invalid!")
 
-    makeLUT(filename, bins, dT, A)
+    makeLUT(filename, bins, dT, A, psize)
 
     print("LUT complete. Written to {0}".format(filename))
 

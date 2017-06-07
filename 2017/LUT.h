@@ -22,6 +22,7 @@ struct lut {
     double total_time;
     double *times;   ///< Array of times.
     double *vals;    ///< Array of values.
+    int *psizes;
 };
 
 // Memory management routines.

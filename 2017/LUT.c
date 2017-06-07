@@ -45,14 +45,21 @@ int initLUT(FILE *fp, LUT *lut){
         return MEMORY_ERROR;
     }
 
+    if ( (_lut->psizes = (int*) malloc(nrows * sizeof(int))) == NULL) {
+        freeLUT(&_lut);
+        *lut = NULL;
+        return MEMORY_ERROR;
+    }
+
     double time;
     double val;
+    int psize;
     int i=0;
     _lut->total_time = 0;
     
     while( (linelen = getline(&line, &linecap, fp)) > 0)
     {
-        if( sscanf(line, "%lf\t%lf", &time, &val) < 2 ){
+        if( sscanf(line, "%lf\t%lf\t%d", &time, &val, &psize) < 3 ){
             freeLUT(&_lut);
             *lut = NULL;
             return IO_ERROR;
@@ -60,6 +67,7 @@ int initLUT(FILE *fp, LUT *lut){
 
         _lut->times[i] = time;
         _lut->vals[i] = val;
+        _lut->psizes[i] = psize;
         _lut->total_time += time;
         i++;
     }
@@ -85,6 +93,9 @@ void freeLUT(LUT *lut){
         }
         if ( (*lut)->vals != NULL ){
             free((*lut)->vals);
+        }
+        if ( (*lut)->psizes != NULL ){
+            free((*lut)->psizes);
         }
         free(*lut);
         (*lut) = NULL;
