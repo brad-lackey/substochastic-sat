@@ -30,7 +30,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Use all CPUs minus 1
-    N_JOBS = 6
+    N_JOBS = 4
 
     # Save at most this number of LUTs
     MAX_LUT = 10
@@ -102,7 +102,8 @@ if __name__ == "__main__":
     # file to store the top MAX_LUT results
     resFile = tag + ".RESULTS.txt"
 
-    CUTOFF_TIME = 60
+    # initial timeout in seconds
+    CUTOFF_TIME = 120
 
     """Returns a dictionary of the MAX_LUT best updates"""
     def getResults(lock):
@@ -202,7 +203,7 @@ if __name__ == "__main__":
 
         lut = fulltag + ".LUT.txt"
 
-        makeLUT(lut, bins, dT, A)
+        makeLUT(lut, bins, dT, A, 16*np.ones(bins))
 
         args = []
         args.append('./testrun.pl')  # the program to run
@@ -224,10 +225,10 @@ if __name__ == "__main__":
         timeout = time.time() - begin
 
         txtfile = fulltag + ".txt"
-        hits, updates = parseTXT(txtfile)
+        hits, updates, factor = parseTXT(txtfile)
 
         if hits < 1:
-            updates = UPDATE_PENALTY
+            updates += (1+factor)*UPDATE_PENALTY
 
         cleanup(fulltag)
 
@@ -252,7 +253,7 @@ if __name__ == "__main__":
             i = tup[0]
             update, t = tup[1]
             msg += "Rank {0}: updates={1}, A={2}, time={3}\n".format(rank+1, update, A_list[i], t)
-            makeLUT(tag + ".LUT.BEST.{0}.txt".format(rank+1), bins, dT, A_list[i])
+            makeLUT(tag + ".LUT.BEST.{0}.txt".format(rank+1), bins, dT, A_list[i], 16*np.ones(bins))
 
         print(msg)
         sendEmail(msg)

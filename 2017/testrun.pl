@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-$queue_size = 4;
+$queue_size = 2;
 
 (scalar(@ARGV) == 5) or (scalar(@ARGV) == 6) or (scalar(@ARGV) == 8) or die "Usage: ./testrun.pl command <LUT.txt> <filelist.dat> trials tag [seed [\"step weight\" \"runtime\"]]\n";
 
@@ -109,6 +109,11 @@ while( <IN> ){
         $loops{$a[0]} += $a[3];
         $updates{$a[0]} += $a[4];
     }
+
+    $factor{$a[0]} = ($a[1]-$opt{$a[0]})/(1+$opt{$a[0]});
+
+    # REMOVE
+    # print "$a[0] Factor: $factor{$a[0]}\n";
 }
 close(IN);
 
@@ -120,6 +125,7 @@ $score = 0;
 $runtime = 0.0;
 $loops = 0.0;
 $updates = 0;
+$factor = 0.0;
 for $file (sort keys %count){
     $count += $count{$file};
     print REPORT "$file ";
@@ -129,12 +135,13 @@ for $file (sort keys %count){
     $runtime += $runtime{$file};
     $loops += $loops{$file};
     $updates += $updates{$file};
+    $factor += $factor{$file};
     if ($hit{$file} > 0) {
         printf REPORT "(%d/%d(%.0f%%)) ", $score{$file}, $count{$file}, (100.0*$score{$file})/$hit{$file};
         printf REPORT "%.3fs loops=%.1f updates=%.3f\n", $runtime{$file}/$hit{$file}, (1.0*$loops{$file})/$hit{$file}, $updates{$file}/$hit{$file};
     } else {
         printf REPORT "(%d/%d(%.0f%%)) ", $score{$file}, $count{$file}, 0.0;
-        printf REPORT "%.3fs loops=%.1f updates=%.1f\n", 0.0, 0.0, 0.0;
+        printf REPORT "%.3fs loops=%.1f updates=%.1f factor=%.3f\n", 0.0, 0.0, 0.0, $factor{$file};
     }
 }
 
@@ -143,12 +150,14 @@ if ($hit > 0){
     printf REPORT "(%d/%d(%.0f%%)) ", $score, $count, (100.0*$score)/$hit;
     printf REPORT "%.3fs ", $runtime/$hit;
     printf REPORT "%.3f loops ", $loops/$hit;
-    printf REPORT "%.3f updates\n", $updates/$hit;
+    printf REPORT "%.3f updates ", $updates/$hit;
+    printf REPORT "%.3f factor\n", $factor;
 } else {
     printf REPORT "(%d/%d(%.0f%%)) ", $score, $count, 0.0;
     printf REPORT "%.3fs ", 0.0;
     printf REPORT "%.3f loops ", 0.0;
-    printf REPORT "%.3f updates\n", $updates/$hit;
+    printf REPORT "%.3f updates ", 0;
+    printf REPORT "%.3f factor\n", $factor/$count;
 }
 close(REPORT);
 
