@@ -30,7 +30,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Use all CPUs minus 1
-    N_JOBS = 2
+    N_JOBS = 6
 
     # Save at most this number of LUTs
     MAX_LUT = 10
@@ -229,7 +229,7 @@ if __name__ == "__main__":
         if hits < 1:
             updates = UPDATE_PENALTY
 
-        cleanup(fulltag, bins)
+        cleanup(fulltag)
 
         saveProgress(progfile, index)
 
@@ -252,7 +252,7 @@ if __name__ == "__main__":
             i = tup[0]
             update, t = tup[1]
             msg += "Rank {0}: updates={1}, A={2}, time={3}\n".format(rank+1, update, A_list[i], t)
-            makeLUT(tag + ".LUT.{0}.BEST.{1}.txt".format(bins, rank+1), bins, dT, A_list[i])
+            makeLUT(tag + ".LUT.BEST.{0}.txt".format(rank+1), bins, dT, A_list[i])
 
         print(msg)
         sendEmail(msg)
@@ -262,7 +262,7 @@ if __name__ == "__main__":
         print("Cleaning output files...")
 
         # Cleans every output file up
-        res = Parallel(n_jobs=-1)(delayed(cleanup)("{0}.{1}".format(tag, i), bins) for i, A in enumerate(A_list))
+        res = Parallel(n_jobs=-1)(delayed(cleanup)("{0}.{1}".format(tag, i)) for i, A in enumerate(A_list))
         print("Done!")
 
     sys.exit(0)

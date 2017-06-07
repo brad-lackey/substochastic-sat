@@ -7,9 +7,9 @@ from itertools import product
 import os
 import sys
 
-def cleanup(tag, bins):
+def cleanup(tag):
     try:
-        os.remove(tag + ".LUT.{0}.txt".format(bins))
+        os.remove(tag + ".LUT.txt")
     except Exception:
         pass  # No LUT file found
     try:
@@ -48,6 +48,6 @@ if __name__ == "__main__":
     dT = np.ones(bins)
 
     # Cleans every output file up
-    res = Parallel(n_jobs=N_JOBS)(delayed(cleanup)("{0}.{1}".format(tag, i), bins) for i, A in enumerate(queue))
+    res = Parallel(n_jobs=N_JOBS)(delayed(cleanup)("{0}.{1}".format(tag, i)) for i, A in enumerate(queue))
 
     sys.exit(0)
