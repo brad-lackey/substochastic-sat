@@ -1,7 +1,7 @@
 /** @file  substochastic.c
  * @brief Main file for Substochastic Monte Carlo.
  *
- * Created by Brad Lackey on 3/14/16. Last modified 5/18/16.
+ * Created by Brad Lackey on 3/14/16. Last modified 6/7/7.
  */
 
 #include <stdio.h>
@@ -104,6 +104,8 @@ int main(int argc, char **argv){
       b = 1 - a;
       a *= weight;
 
+// Can readjust population size according to schedule here.
+      
 //      printf("%u: %lf, %lf\n", time_index, lut->times[time_index], lut->vals[time_index]);
 
       t = 0;
@@ -389,7 +391,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
   //  printf("c Step weight: %.3f\n", weight);
   printf("c Target potential: %ld\n", optimal);
   printf("c Top potential: %ld\n", topweight);
-  arraysize = 2000;
+  arraysize = 3*popsize;
   
   srand48(seed);
   printf("c Seed: %i\n", seed);

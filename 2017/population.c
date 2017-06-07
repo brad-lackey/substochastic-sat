@@ -1,7 +1,7 @@
 /** @file  population.c
  * @brief Source file for a population.
  *
- * Created by Brad Lackey on 3/30/16. Last modified 5/18/16.
+ * Created by Brad Lackey on 3/30/16. Last modified 6/7/17.
  */
 
 #include <stdio.h>
@@ -174,5 +174,47 @@ void randomPopulation(Population P, int size){
   P->min_v = min;
   
   copyBitstring(P->winner, P->walker[argmin]);
+}
+
+
+int reallocatePopulation(Population P, int new_size, int parity){
+  int i,j,err,new_arraysize;
+  
+  // First check if we need more memory (and move walkers into correct position if needed).
+  if ( arraysize < 3*new_size ) {
+    
+    // Allocate memory.
+    new_arraysize = 3*new_size;
+    if ( (P->walker = (Bitstring *) realloc(P->walker, (2*new_arraysize)*sizeof(Bitstring))) == NULL ){
+      freePopulation(&P);
+      return MEMORY_ERROR;
+    }
+    
+    // Initialize new walker locations.
+    for (i=2*arraysize; i<(2*new_arraysize); ++i) {
+      if ( (err = initBitstring(P->walker + i)) ) {
+        freePopulation(&P);
+        return err;
+      }
+    }
+    
+    // Move walkers to new position in array if necessary.
+    if ( parity )
+      for (i=0; i<P->psize; ++i)
+        copyBitstring(P->walker[new_arraysize+i], P->walker[arraysize+i]);
+    
+    // Adjust arraysize
+    arraysize = new_arraysize;
+  }
+  
+  // Now we can grow/shrink the population to correct size.
+  err = parity*arraysize;                              // Reuse the err variable as the parity offset.
+  for (i=P->psize; i<new_size; ++i) {                  // Add walkers if needed.
+    j = lrand48() % P->psize;                          // Choose a random walker.
+    copyBitstring(P->walker[err+i], P->walker[err+j]); // Clone it into the next position.
+  }
+  P->psize = new_size;
+  
+  return 0;
 }
 
