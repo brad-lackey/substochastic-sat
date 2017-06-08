@@ -105,13 +105,14 @@ int main(int argc, char **argv){
       a *= weight;
 
 // Can readjust population size according to schedule here.
-      reallocatePopulation(pop, lut->psizes[time_index], parity);
-      
+      popsize = lut->psizes[time_index];
+      reallocatePopulation(pop, popsize, parity);
+            
 //      printf("%u: %lf, %lf\n", time_index, lut->times[time_index], lut->vals[time_index]);
 
       t = 0;
       while (t < runtime*(lut->times[time_index])) {
-
+//      printf("population now is (%d,%d)\n",pop->psize,popsize); 
 //      a = weight*(1.0 - t/runtime); // Turned weight into percent -- Michael 3/30/16
 //      b = (t/runtime);
 
@@ -265,6 +266,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
     end_weight = 0.01;
     runtime = sat->num_vars*sat->num_vars/100;
     runstep = 2*runtime;
+//    popsize = 16;
     popsize = 1024;
     if ( NUM_VARIABLE_WORDS*vlen*tlen*sizeof(word_t) + NUM_CLAUSE_WORDS*clen*sizeof(int) < (1<<30) )
       runmode = 2;
@@ -316,6 +318,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
     end_weight = sat->total_weight/10000.0;
     runtime = exp(0.035*sat->num_vars + 6.1);
     runstep = exp(0.030*sat->num_vars + 4.4);
+//    popsize = 16;
     popsize = 64;
     runmode = 1;
     
@@ -353,6 +356,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
     runtime = exp(0.032*sat->num_vars + 9.3);
     runstep = exp(0.036*sat->num_vars + 7.9);
     popsize = 128;
+//    popsize = 16;
     runmode = 2;
   }
   
