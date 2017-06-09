@@ -10,8 +10,8 @@ import datetime
 
 BOUND_CAP = 0.1  # cap on the bounds
 BOUND_MULTIPLIER = 1.1  # fraction over which the bound can extend
-UPDATE_PENALTY = 100000  # penalty to give scripts which timeout
-N_ITERS_CAP = 1  # max number of optimization iterations
+UPDATE_PENALTY = 10000000  # penalty to give scripts which timeout
+N_ITERS_CAP = 5  # max number of optimization iterations
 RECURSION_LIMIT = 5  # max levels optimizer can branch LUT
 
 """Returns the dT and A vectors from a LUT file as a tuple"""
@@ -315,15 +315,25 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
 
             if email:
                 msg = "Progress: {0}/{1} iterations complete.".format(i + 1, N_ITERS_CAP) + "\n"
+                msg += "Level: {0}\n".format(recursion_level)
                 msg += "Time spent so far: " + str(datetime.datetime.now() - start) + '\n'
                 sendEmail(msg)
 
             if not minFound:
                 print("No changes detected. Breaking out of loop...")
+
                 msg = "Optimization converged at {0}, with {1}={2}".format(fmin, var, varmin)
-                sendEmail(msg)
+                if email:
+                    sendEmail(msg)
+                if verbose:
+                    print(msg)
 
                 if not newLUT:
+                    msg = "No improvements after {0} levels. Finishing up...".format(recursion_level)
+                    if verbose:
+                         print(msg)
+                    if email:
+                         sendEmail(msg)
                     return fmin, dT, A
                 break
 
@@ -356,10 +366,14 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
             if fmin1 > fmin and fmin2 > fmin:
                 if changedLUT:
                     # if it cannot improve it past the fmin, save the best schedule and break the loop
+                    if verbose:
+                        print("Cannot improve past fmin. Breaking out of loop...")
                     break
                 else:
                     # if it hasn't improved the given schedule at all, return and break out of the recursion...our job
                     #  is done.
+                    if verbose:
+                        print("No improvements detected. Returning fmin = {0}".format(fmin))
                     return fmin, dT, A
             else:
                 fmin = min([fmin1, fmin2])
@@ -434,19 +448,27 @@ def getMinimizer(var):
 
 def branchLUT(lut, tag, datfile, trials, weight, runtime, recursion_level, email, plotenabled, verbose):
     # Get the best var
-    bins, dT, A = parseLUT(lut)
+    bins, dT, A, psizes = parseLUT(lut)
     # split dT's largest bin in half
     maxBin = dT.max()
     maxI = dT.argmax()
     dT[maxI] = maxBin / 2.0
     dT = np.insert(dT, maxI, maxBin / 2.0)
     A = np.insert(A, maxI, A[maxI])
+    psizes = np.insert(psizes, maxI, psizes[maxI])
 
     lut = lut.rstrip(".txt") + "." + str(recursion_level) + ".txt"
-    makeLUT(lut, bins + 1, dT, A, np.ones(bins)*16)
-
-    print("Recursing down to level {0}...".format(recursion_level + 1))
-    print("dT={0}\nA={1}".format(dT, A))
+    print(len(psizes))
+    print(len(A))
+    print("###########################################################")
+    print("###########################################################")
+    makeLUT(lut, bins + 1, dT, A, psizes)
+    if verbose:
+        print("Recursing down to level {0}...".format(recursion_level + 1))
+        print("dT={0}\nA={1}".format(dT, A))
+    if email:
+        msg = "Recursing down to level {0}...".format(recursion_level+1)
+        sendEmail(msg)
 
     return optimizeLUT("both", lut, datfile, trials, tag, weight, runtime, recursion_level=recursion_level + 1,
                               email=email, verbose=verbose, plotenabled=plotenabled)
