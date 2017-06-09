@@ -458,11 +458,13 @@ def branchLUT(lut, tag, datfile, trials, weight, runtime, recursion_level, email
     psizes = np.insert(psizes, maxI, psizes[maxI])
 
     lut = lut.rstrip(".txt") + "." + str(recursion_level) + ".txt"
-    print(len(psizes))
-    print(len(A))
-    print("###########################################################")
-    print("###########################################################")
+
+    if verbose:
+        print("###########################################################")
+        print("###########################################################")
+
     makeLUT(lut, bins + 1, dT, A, psizes)
+
     if verbose:
         print("Recursing down to level {0}...".format(recursion_level + 1))
         print("dT={0}\nA={1}".format(dT, A))
