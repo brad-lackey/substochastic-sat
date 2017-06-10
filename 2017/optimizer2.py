@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 from optimizeLUT import parseLUT, sendEmail, getABounds
 from scipy import stats
 from subprocess32 import check_call, TimeoutExpired
