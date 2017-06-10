@@ -1,61 +1,66 @@
-#!/usr/bin/python
-import sys
-from createLUT import makeLUT
+from optimizeLUT import parseLUT, sendEmail, getABounds
+from scipy import stats
 from subprocess32 import check_call, TimeoutExpired
 import numpy as np
-from scipy.optimize import fminbound
 import matplotlib.pyplot as plt
-import smtplib
+from scipy.optimize import fminbound
 import datetime
+import sys
+from createLUT import makeLUT
+from histAnalysis import parseOUT
 
 BOUND_CAP = 0.1  # cap on the bounds
 BOUND_MULTIPLIER = 1.1  # fraction over which the bound can extend
 UPDATE_PENALTY = 10000000  # penalty to give scripts which timeout
 N_ITERS_CAP = 5  # max number of optimization iterations
 RECURSION_LIMIT = 5  # max levels optimizer can branch LUT
+THRESHOLD = 0.1  # min threshold before accepting new minimum
 
-"""Returns the dT and A vectors from a LUT file as a tuple"""
-def parseLUT(lutfile):
+def main():
+    args = sys.argv
+    email = False
+    verbose = False
+    plotenabled = False
 
-    with open(lutfile, 'r') as f:
-        line = f.readline()
-        bins = int(line)
-        dT = np.zeros(bins)
-        A = np.zeros(bins)
-        psize = np.zeros(bins)
-        row = 0
-        while len(line) > 0:
-            line = f.readline()
-            if len(line) > 0:
-                dT[row], A[row], psize[row] = line.rstrip('\n').split('\t')
-                row += 1
-        if row != bins:
-            raise Exception("Invalid LUT file format!")
+    if '-m' in args:
+        email = True
+        args.remove('-m')
+    if '-v' in args:
+        verbose = True
+        args.remove('-v')
+    if '-p' in args:
+        plotenabled = True
+        args.remove('-p')
+    if len(args) == 7 or len(args) == 9:
+        var = args[1]
+        global xpmt
+        xpmt = int(args[2])
 
-    return bins, dT, A, psize
+        if xpmt < 0 or xpmt > 2:
+            print("Usage: ./optimizer2 dT|A|both <experiment_type (0:fwd/bwd, 1:2 rnd, 2:2 no-cons rnd)> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
+            return 1
 
-"""Returns the percentage of hits and avg runtime as a tuple"""
-def parseTXT(txtfile):
-    last = ''
-    with open(txtfile, 'r') as f:
-        line = f.readline()
-        while len(line) > 0:
-            last = line
-            line = f.readline()
+        lutfile = args[3]
+        datfile = args[4]
+        trials = args[5]
+        tag = args[6]
+        weight = None
+        runtime = None
 
-    # Parse last line
-    _, hitStr, _, tStr, lStr, _, uStr, _, fStr, _ = last.split()
+        if len(args) == 9:
+            weight = args[7]
+            runtime = args[8]
 
-    fraction = map(float, hitStr[0:hitStr.rfind('(')].split('/'))
-    hit = fraction[0]/fraction[1]
-    loops = float(lStr)
-    t = float(tStr.rstrip("s"))
-    updates = float(uStr)
-    factor = float(fStr)
+    else:
+        print("Usage: ./optimizer2 dT|A|both <experiment_type (0:fwd/bwd, 1:2 rnd, 2:2 no-cons rnd)> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
+        return 1
 
-    return hit, updates, factor
+    optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_level=0, email=email, verbose=verbose, plotenabled=plotenabled)
 
-"""Returns the avg updates of a set of conf files using given LUT"""
+    return 0
+
+
+"""Returns the negative t-statistic from a t-test from this set of conf files using given LUT to the previous best LUT"""
 def tryLUT(tag, filename, trials, dT, A, psize, weight=None, runtime=None, plotenabled=False, verbose=False):
     if len(dT) != len(A) or len(psize) != len(dT) or len(psize) != len(A):
         raise Exception("Vectors dT, A and psize are not the same length!")
@@ -83,11 +88,15 @@ def tryLUT(tag, filename, trials, dT, A, psize, weight=None, runtime=None, plote
     except TimeoutExpired:
         return UPDATE_PENALTY
 
-    txtfile = tag + ".txt"
-    hits, updates, factor = parseTXT(txtfile)
+    outfile = tag + ".out"
+    times, loops, updates = parseOUT(outfile)
 
-    if hits < 1:
-        updates += (1+factor)*UPDATE_PENALTY
+    global best_updates
+    if best_updates is None:
+        best_updates = updates
+        return 0.0
+    else:
+        tstat, p = stats.ttest_ind(updates, best_updates)
 
     if plotenabled:
         # Plot A vs t
@@ -104,94 +113,12 @@ def tryLUT(tag, filename, trials, dT, A, psize, weight=None, runtime=None, plote
         plt.draw()
 
     if verbose:
-        print("Tried dT=" + str(dT) + ", A=" + str(A) + " with updates=" + str(updates))
+        print("Tried dT=" + str(dT) + ", A=" + str(A) + " with a t-stat=" + str(tstat) + ", p={0}".format(p))
 
-    return updates
-
-
-def sendEmail(msg):
-    server = smtplib.SMTP("smtp.gmail.com", 587)
-    server.starttls()
-    server.login("email.notifier.bryanluu@gmail.com", "7788382652")
-    server.sendmail("email.notifier.bryanluu@gmail.com", "bryanluu30794@gmail.com", '\n'+msg)
-    server.quit()
-
-
-def getABounds(bins, row, varvector):
-    if row == 0 or row == bins - 1:
-        if row == 0:
-            diff = BOUND_MULTIPLIER * abs(varvector[row + 1] - varvector[row])
-        else:
-            diff = BOUND_MULTIPLIER * abs(varvector[row - 1] - varvector[row])
-
-        if diff > BOUND_CAP:
-            diff = BOUND_CAP
-
-        lbound = varvector[row] - diff
-        ubound = varvector[row] + diff
+    if p < THRESHOLD:
+        return tstat
     else:
-        ldiff = BOUND_MULTIPLIER * abs(varvector[row] - varvector[row - 1])
-        rdiff = BOUND_MULTIPLIER * abs(varvector[row + 1] - varvector[row])
-
-        if ldiff > BOUND_CAP:
-            ldiff = BOUND_CAP
-        if rdiff > BOUND_CAP:
-            rdiff = BOUND_CAP
-
-        if varvector[row - 1] <= varvector[row + 1]:
-            lbound = varvector[row] - ldiff
-            ubound = varvector[row] + rdiff
-        else:
-            ubound = varvector[row] + ldiff
-            lbound = varvector[row] - rdiff
-    lbound = max(lbound, 0)
-    ubound = min(ubound, 1)
-    return lbound, ubound
-
-
-def main():
-    args = sys.argv
-    email = False
-    verbose = False
-    plotenabled = False
-
-    if '-m' in args:
-        email = True
-        args.remove('-m')
-    if '-v' in args:
-        verbose = True
-        args.remove('-v')
-    if '-p' in args:
-        plotenabled = True
-        args.remove('-p')
-    if len(args) == 7 or len(args) == 9:
-        var = args[1]
-        global xpmt
-        xpmt = int(args[2])
-
-        if xpmt < 0 or xpmt > 2:
-            print("Usage: ./optimizeLUT dT|A|both <experiment_type (0:fwd/bwd, 1:2 rnd, 2:2 no-cons rnd)> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
-            return 1
-
-        lutfile = args[3]
-        datfile = args[4]
-        trials = args[5]
-        tag = args[6]
-        weight = None
-        runtime = None
-
-        if len(args) == 9:
-            weight = args[7]
-            runtime = args[8]
-
-    else:
-        print("Usage: ./optimizeLUT dT|A|both <experiment_type (0:fwd/bwd, 1:2 rnd, 2:2 no-cons rnd)> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
-        return 1
-
-    optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_level=0, email=email, verbose=verbose, plotenabled=plotenabled)
-
-
-    return 0
+        return 0.0
 
 
 def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_level=0, email=False, verbose=False, plotenabled=False, start=datetime.datetime.now()):
@@ -216,6 +143,8 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
             sendEmail(msg)
 
     # set initial minimum to initial LUT performance
+    global best_updates
+    best_updates = None
     fmin = tryLUT(tag, datfile, trials, dT, A, np.ones(bins)*16, weight, runtime, plotenabled, verbose)
 
     if recursion_level >= RECURSION_LIMIT:
@@ -283,13 +212,15 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                     lbound, ubound = getABounds(bins, row, varvector)
 
                     x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(
-                    row, np.delete(varvector, row), tag, datfile, trials, othervector, np.ones(bins)*16, weight,
-                    runtime, verbose, plotenabled),
+                        row, np.delete(varvector, row), tag, datfile, trials, othervector, np.ones(bins)*16, weight,
+                        runtime, verbose, plotenabled),
                                                         full_output=True, xtol=0.01)
                     varvector[row] = x0
 
-                if fval < fmin:
+                if fval < 0:
                     fmin = fval
+
+                    _, _, best_updates = parseOUT(tag + ".out")
 
                     varmin = varvector.copy()
 
@@ -309,8 +240,8 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
 
                 if verbose:
                     print(
-                    "---------- Found {0}[{1}]={2}".format(var, row, x0) + " at updates " + str(fval) + " after " + str(
-                        numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N_ITERS_CAP))
+                        "---------- Found {0}[{1}]={2}".format(var, row, x0) + " at updates " + str(fval) + " after " + str(
+                            numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N_ITERS_CAP))
 
             if email:
                 msg = "Progress: {0}/{1} iterations complete.".format(i + 1, N_ITERS_CAP) + "\n"
@@ -330,9 +261,9 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                 if not newLUT:
                     msg = "No improvements after {0} levels. Finishing up...".format(recursion_level)
                     if verbose:
-                         print(msg)
+                        print(msg)
                     if email:
-                         sendEmail(msg)
+                        sendEmail(msg)
                     return fmin, dT, A
                 break
 
@@ -347,8 +278,8 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
         while True:
 
             fmin1, new_dT, new_A = optimizeLUT('A', lut, datfile, trials, tag, weight, runtime,
-                                                   recursion_level=recursion_level, email=email, verbose=verbose,
-                                                   plotenabled=plotenabled, start=start)
+                                               recursion_level=recursion_level, email=email, verbose=verbose,
+                                               plotenabled=plotenabled, start=start)
 
             if fmin1 < fmin2 and fmin1 < fmin:
                 makeLUT(lut, bins, new_dT, new_A, np.ones(bins)*16)
@@ -431,13 +362,13 @@ def getMinimizer(var):
                 return tryLUT(tag, filename, trials, dT, A, psize, weight, runtime, p, v)
         else:
             f = lambda x1, i, x2, a1, a2, a3, a4, psize, a5, a6, v, p: tryLUT(a1, a2, a3, np.insert(x2, i, x1),
-                                                                       a4, psize, a5,
-                                                                       a6, verbose=v,
-                                                                       plotenabled=p)  # rearranging the arguments for dT
+                                                                              a4, psize, a5,
+                                                                              a6, verbose=v,
+                                                                              plotenabled=p)  # rearranging the arguments for dT
     elif var == 'A':
         f = lambda x1, i, x2, a1, a2, a3, a4, psize, a5, a6, v, p: tryLUT(a1, a2, a3, a4, np.insert(x2, i, x1), psize, a5,
-                                                                   a6, verbose=v,
-                                                                   plotenabled=p)  # rearranging the arguments for A
+                                                                          a6, verbose=v,
+                                                                          plotenabled=p)  # rearranging the arguments for A
     elif var == 'both':
         return None
     else:
@@ -472,7 +403,7 @@ def branchLUT(lut, tag, datfile, trials, weight, runtime, recursion_level, email
         sendEmail(msg)
 
     return optimizeLUT("both", lut, datfile, trials, tag, weight, runtime, recursion_level=recursion_level + 1,
-                              email=email, verbose=verbose, plotenabled=plotenabled, start=start)
+                       email=email, verbose=verbose, plotenabled=plotenabled, start=start)
 
 
 if __name__ == "__main__":
