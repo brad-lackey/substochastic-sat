@@ -16,7 +16,7 @@ $runtime = $ARGV[7];
 
 if($seed eq "")
 {
-    $seed = int(rand(1000))
+    $seed = int(rand(1000000000))
 }
 
 printf "SEED: %d..%d, QUEUE_SIZE: %d\n", $seed, $seed+$trials, $queue_size;
