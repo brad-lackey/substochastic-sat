@@ -99,7 +99,8 @@ int main(int argc, char **argv){
 //    randomPopulation(pop,popsize);
     local_min = min;
 
-    for(int time_index=0; time_index < lut->nrows; time_index++) {
+    int time_index;
+    for(time_index=0; time_index < lut->nrows; time_index++) {
       a = lut->vals[time_index];
       b = 1 - a;
       a *= weight;
