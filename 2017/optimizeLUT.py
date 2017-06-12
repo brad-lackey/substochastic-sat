@@ -34,6 +34,22 @@ def parseLUT(lutfile):
 
     return bins, dT, A, psize
 
+
+def plotLUT(dT, A):
+    # Plot A vs t
+    t = np.cumsum(dT)
+    t = t - np.ediff1d(t, to_begin=t[0]) / 2.0  # staggers the time so that it falls in between the bins
+    plt.hold(False)
+    plt.plot(t, A)
+    plt.ylabel("A-Values")
+    plt.xlabel("Time")
+    plt.title("A vs. T")
+    ax = plt.gca()
+    ax.relim()
+    ax.autoscale_view()
+    plt.draw()
+
+
 """Returns the percentage of hits and avg runtime as a tuple"""
 def parseTXT(txtfile):
     last = ''
@@ -63,6 +79,9 @@ def tryLUT(tag, filename, trials, dT, A, psize, weight=None, runtime=None, plote
     bins = len(dT)
     lut = tag + ".LUT.txt"
 
+    psize = map(round, psize)
+    psize = map(int, psize)
+
     makeLUT(lut, bins, dT, A, psize)
 
     args = []
@@ -90,21 +109,14 @@ def tryLUT(tag, filename, trials, dT, A, psize, weight=None, runtime=None, plote
         updates += (1+factor)*UPDATE_PENALTY
 
     if plotenabled:
-        # Plot A vs t
-        t = np.cumsum(dT)
-        t = t - np.ediff1d(t, to_begin=t[0])/2.0  # staggers the time so that it falls in between the bins
-        plt.hold(False)
-        plt.plot(t, A)
-        plt.ylabel("A-Values")
-        plt.xlabel("Time")
-        plt.title("A vs. T")
-        ax = plt.gca()
-        ax.relim()
-        ax.autoscale_view()
-        plt.draw()
+        global var
+        if var == 'psize':
+            plotPsize(dT, psize)
+        else:
+            plotLUT(dT, A)
 
     if verbose:
-        print("Tried dT=" + str(dT) + ", A=" + str(A) + " with updates=" + str(updates))
+        print("Tried dT=" + str(dT) + ", A=" + str(A) + ", Psize=" + str(psize) + "  with updates=" + str(updates))
 
     return updates
 
@@ -165,12 +177,13 @@ def main():
         plotenabled = True
         args.remove('-p')
     if len(args) == 7 or len(args) == 9:
+        global var
         var = args[1]
         global xpmt
         xpmt = int(args[2])
 
         if xpmt < 0 or xpmt > 2:
-            print("Usage: ./optimizeLUT dT|A|both <experiment_type (0:fwd/bwd, 1:2 rnd, 2:2 no-cons rnd)> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
+            print("Usage: ./optimizeLUT dT|A|psize|both <experiment_type (0:fwd/bwd, 1:2 rnd, 2:2 no-cons rnd)> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
             return 1
 
         lutfile = args[3]
@@ -185,7 +198,7 @@ def main():
             runtime = args[8]
 
     else:
-        print("Usage: ./optimizeLUT dT|A|both <experiment_type (0:fwd/bwd, 1:2 rnd, 2:2 no-cons rnd)> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
+        print("Usage: ./optimizeLUT dT|A|psize|both <experiment_type (0:fwd/bwd, 1:2 rnd, 2:2 no-cons rnd)> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
         return 1
 
     optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_level=0, email=email, verbose=verbose, plotenabled=plotenabled)
@@ -216,15 +229,17 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
             sendEmail(msg)
 
     # set initial minimum to initial LUT performance
-    fmin = tryLUT(tag, datfile, trials, dT, A, np.ones(bins)*16, weight, runtime, plotenabled, verbose)
+    fmin = tryLUT(tag, datfile, trials, dT, A, psize, weight, runtime, plotenabled, verbose)
 
     if recursion_level >= RECURSION_LIMIT:
-        return fmin, dT, A
+        return fmin, dT, A, psize
 
     if var == 'dT':
         varmin = dT.copy()
     elif var == 'A':
         varmin = A.copy()
+    elif var == 'psize':
+        varmin = psize.copy()
 
     if xpmt == 0:
         indices = np.concatenate((np.arange(bins), np.arange(bins-1)[::-1]))  # [0 1 2 .. bins-1 .. 2 1 0]
@@ -259,7 +274,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                         lbound, ubound = edges[row], edges[row+2]
 
                         x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(
-                            row, tag, datfile, trials, varvector, othervector, np.ones(bins)*16, weight, runtime),
+                            row, tag, datfile, trials, varvector, othervector, psize, weight, runtime),
                                                             full_output=True, xtol=0.01)
 
                         edges[row+1] = x0
@@ -272,7 +287,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                         lbound, ubound = 0.1, 2.0
 
                         x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(
-                            row, np.delete(varvector, row), tag, datfile, trials, othervector, np.ones(bins)*16, weight,
+                            row, np.delete(varvector, row), tag, datfile, trials, othervector, psize, weight,
                             runtime, verbose, plotenabled),
                                                             full_output=True, xtol=0.01)
                         varvector[row] = x0
@@ -288,6 +303,17 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                                                         full_output=True, xtol=0.01)
                     varvector[row] = x0
 
+                elif var == "psize":
+                    varvector, othervector = psize, dT
+
+                    lbound, ubound = 0.5*psize[row], 2*psize[row]
+
+                    x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(
+                        row, np.delete(varvector, row), tag, datfile, trials, othervector, A, weight,
+                        runtime, verbose, plotenabled),
+                                                        full_output=True, xtol=0.01)
+                    varvector[row] = x0
+
                 if fval < fmin:
                     fmin = fval
 
@@ -298,9 +324,12 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                     # Store the best var
                     lut = tag + ".OPTIMAL." + var + ".txt"
                     if var == "dT":
-                        makeLUT(lut, bins, varmin, A, np.ones(bins)*16)
+                        makeLUT(lut, bins, varmin, A, psize)
+                    elif var == "A":
+                        makeLUT(lut, bins, dT, varmin, psize)
                     else:
-                        makeLUT(lut, bins, dT, varmin, np.ones(bins)*16)
+                        makeLUT(lut, bins, dT, A, varmin)
+
 
                     if plotenabled:
                         plt.savefig(tag + ".OPTIMAL." + var + ".png")
@@ -382,6 +411,8 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
         fmin, dT, A = branchLUT(lut, tag, datfile, trials, weight, runtime, recursion_level, email, plotenabled, verbose, start)
     elif var == 'A':
         A = varmin.copy()
+    elif var == 'psize':
+        psize = varmin.copy()
     else:
         dT = varmin.copy()
 
@@ -390,24 +421,15 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
             # Print the best updates
             print("Best # updates: " + str(fmin))
         if plotenabled:
-            t = np.cumsum(dT)
-
-            t = t - np.ediff1d(t, to_begin=t[0]) / 2.0  # staggers the time so that it falls in between the bins
-
-            plt.plot(t, A)
-
-            plt.ylabel("A-Values")
-            plt.xlabel("Time")
-            plt.title("A vs. T")
-            ax = plt.gca()
-            ax.relim()
-            ax.autoscale_view()
-            plt.draw()
+            if var == 'psize':
+                plotPsize(dT, psize)
+            else:
+                plotLUT(dT, A)
         if email:
             if var == "both":
                 msg = "Optimization finished after " + str(datetime.datetime.now() - start) + \
                       ", at " + datetime.datetime.now().strftime("%a %d/%m/%y %H:%M:%S") + \
-                      "!\nOptimal dT: {0}\nOptimal A: {1}\nOptimum # updates: {2}\n".format(dTmin, Amin, fmin)
+                      "!\nOptimal dT: {0}\nOptimal A: {1}\nOptimum # updates: {2}\n".format(dT, A, fmin)
             else:
                 msg = "Optimization finished after " + str(datetime.datetime.now() - start) + \
                       ", at " + datetime.datetime.now().strftime("%a %d/%m/%y %H:%M:%S") + \
@@ -415,6 +437,21 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
             sendEmail(msg)
 
     return fmin, dT, A
+
+
+def plotPsize(dT, psize):
+    # Plot psize vs t
+    t = np.cumsum(dT)
+    t = t - np.ediff1d(t, to_begin=t[0]) / 2.0  # staggers the time so that it falls in between the bins
+    plt.hold(False)
+    plt.plot(t, psize)
+    plt.ylabel("Population Size")
+    plt.xlabel("Time")
+    plt.title("P-size vs. T")
+    ax = plt.gca()
+    ax.relim()
+    ax.autoscale_view()
+    plt.draw()
 
 
 def getMinimizer(var):
@@ -440,8 +477,10 @@ def getMinimizer(var):
                                                                    plotenabled=p)  # rearranging the arguments for A
     elif var == 'both':
         return None
+    elif var == 'psize':
+        f = lambda x1, i, x2, a1, a2, a3, a4, a5, a6, a7, v, p: tryLUT(a1, a2, a3, a4, a5, np.insert(x2, i, x1), a6, a7, verbose=v, plotenabled=p)
     else:
-        raise Exception("Invalid variable argument! Must be \"dT\", \"A\" or \"both\"")
+        raise Exception("Invalid variable argument! Must be \"dT\", \"A\", \"psize\" or \"both\"")
     return f
 
 
