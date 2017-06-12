@@ -147,7 +147,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
     fmin = tryLUT(tag, datfile, trials, dT, A, np.ones(bins)*16, weight, runtime, plotenabled, verbose)
 
     if recursion_level >= RECURSION_LIMIT:
-        return fmin, dT, A
+        return fmin, dT, A, psize
 
     if var == 'dT':
         varmin = dT.copy()
@@ -271,7 +271,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                         print(msg)
                     if email:
                         sendEmail(msg)
-                    return fmin, dT, A
+                    return fmin, dT, A, psize
                 break
 
     else:
@@ -311,7 +311,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                     #  is done.
                     if verbose:
                         print("No improvements detected. Returning fmin = {0}".format(fmin))
-                    return fmin, dT, A
+                    return fmin, dT, A, psize
             else:
                 fmin = min([fmin1, fmin2])
 
@@ -345,7 +345,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                       "!\nOptimal " + var + ": " + str(varmin) + "\nOptimum # updates: " + str(fmin) + "\n"
             sendEmail(msg)
 
-    return fmin, dT, A
+    return fmin, dT, A, psize
 
 
 def getMinimizer(var):
