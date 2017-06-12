@@ -95,7 +95,7 @@ def tryLUT(tag, filename, trials, dT, A, psize, weight=None, runtime=None, plote
         return UPDATE_PENALTY
 
     outfile = tag + ".out"
-    times, loops, updates = parseOUT(outfile)
+    _, times, loops, updates = parseOUT(outfile)
 
     global best_updates
     if best_updates is None:
@@ -144,7 +144,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
     # set initial minimum to initial LUT performance
     global best_updates
     best_updates = None
-    fmin = tryLUT(tag, datfile, trials, dT, A, np.ones(bins)*16, weight, runtime, plotenabled, verbose)
+    fmin = tryLUT(tag, datfile, trials, dT, A, psize, weight, runtime, plotenabled, verbose)
 
     if recursion_level >= RECURSION_LIMIT:
         return fmin, dT, A, psize
@@ -153,6 +153,8 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
         varmin = dT.copy()
     elif var == 'A':
         varmin = A.copy()
+    elif var == "psize":
+        varmin = psize.copy()
 
     if xpmt == 0:
         indices = np.concatenate((np.arange(bins), np.arange(bins-1)[::-1]))  # [0 1 2 .. bins-1 .. 2 1 0]
@@ -187,7 +189,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                         lbound, ubound = edges[row], edges[row+2]
 
                         x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(
-                            row, tag, datfile, trials, varvector, othervector, np.ones(bins)*16, weight, runtime),
+                            row, tag, datfile, trials, varvector, othervector, psize, weight, runtime),
                                                             full_outplotPsizeput=True, xtol=0.01)
 
                         edges[row+1] = x0
@@ -222,12 +224,12 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                     x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(
                         row, np.delete(varvector, row), tag, datfile, trials, othervector, A, weight,
                         runtime, verbose, plotenabled), full_output=True, xtol=1)
-                    varvector[row] = x0
+                    varvector[row] = int(round(x0))
 
                 if fval < 0:
                     fmin = fval
 
-                    _, _, best_updates = parseOUT(tag + ".out")
+                    _, _, _, best_updates = parseOUT(tag + ".out")
 
                     varmin = varvector.copy()
 
@@ -236,9 +238,11 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                     # Store the best var
                     lut = tag + ".OPTIMAL." + var + ".txt"
                     if var == "dT":
-                        makeLUT(lut, bins, varmin, A, np.ones(bins)*16)
+                        makeLUT(lut, bins, varmin, A, psize)
+                    elif var == "psize":
+                        makeLUT(lut, bins, dT, A, varmin)
                     else:
-                        makeLUT(lut, bins, dT, varmin, np.ones(bins)*16)
+                        makeLUT(lut, bins, dT, varmin, psize)
 
                     if plotenabled:
                         plt.savefig(tag + ".OPTIMAL." + var + ".png")
@@ -247,7 +251,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
 
                 if verbose:
                     print(
-                        "---------- Found {0}[{1}]={2}".format(var, row, x0) + " at updates " + str(fval) + " after " + str(
+                        "---------- Found {0}[{1}]={2}".format(var, row, varvector[row]) + " at updates " + str(fval) + " after " + str(
                             numfunc) + " tries, {0}/{1} iterations ----------".format(i + 1, N_ITERS_CAP))
 
             if email:
@@ -280,24 +284,24 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
         changedLUT = False
 
         lut = tag + ".LUT.txt"
-        makeLUT(lut, bins, dT, A, np.ones(bins)*16)
+        makeLUT(lut, bins, dT, A, psize)
 
         while True:
 
-            fmin1, new_dT, new_A = optimizeLUT('A', lut, datfile, trials, tag, weight, runtime,
+            fmin1, new_dT, new_A, new_psize = optimizeLUT('A', lut, datfile, trials, tag, weight, runtime,
                                                recursion_level=recursion_level, email=email, verbose=verbose,
                                                plotenabled=plotenabled, start=start)
 
             if fmin1 < fmin2 and fmin1 < fmin:
-                makeLUT(lut, bins, new_dT, new_A, np.ones(bins)*16)
+                makeLUT(lut, bins, new_dT, new_A, new_psize)
                 changedLUT = True
 
-            fmin2, new_dT, new_A = optimizeLUT('dT', lut, datfile, trials, tag, weight, runtime,
+            fmin2, new_dT, new_A, new_psize = optimizeLUT('dT', lut, datfile, trials, tag, weight, runtime,
                                                recursion_level=recursion_level, email=email, verbose=verbose,
                                                plotenabled=plotenabled, start=start)
 
             if fmin2 < fmin1 and fmin2 < fmin:
-                makeLUT(lut, bins, new_dT, new_A, np.ones(bins)*16)
+                makeLUT(lut, bins, new_dT, new_A, new_psize)
                 changedLUT = True
 
             if fmin1 > fmin and fmin2 > fmin:
@@ -330,7 +334,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
             # Print the best updates
             print("Best # updates: " + str(fmin))
         if plotenabled:
-            if var == 'psize':
+            if var == "psize":
                 plotPsize(dT, psize)
             else:
                 plotLUT(dT, A)
