@@ -197,7 +197,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                     else:
                         varvector, othervector = dT, A
 
-                        lbound, ubound = 0.1, 2.0
+                        lbound, ubound = 0.1, 100.0
 
                         x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(
                             row, np.delete(varvector, row), tag, datfile, trials, othervector, psize, weight,
@@ -207,7 +207,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                 elif var == "A":
                     varvector, othervector = A, dT
 
-                    lbound, ubound = getABounds(bins, row, varvector)
+                    lbound, ubound = 0.1, 1.0
 
                     x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(
                         row, np.delete(varvector, row), tag, datfile, trials, othervector, psize, weight,
