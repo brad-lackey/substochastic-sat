@@ -127,7 +127,7 @@ int main(int argc, char **argv){
 //          dt = runtime - t;
 
         update(a*dt, b*dt, mean, pop, parity);
-        updates++;
+        updates += pop->psize;
 
         end = clock();
         time_spent = (double) (end - beg) / CLOCKS_PER_SEC;
