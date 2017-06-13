@@ -219,7 +219,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                 elif var == "psize":
                     varvector, othervector = psize, dT
 
-                    lbound, ubound = 0.5 * psize[row], 2 * psize[row]
+                    lbound, ubound = max([psize[row]-4, 8]), psize[row]+4
 
                     x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(
                         row, np.delete(varvector, row), tag, datfile, trials, othervector, A, weight,
