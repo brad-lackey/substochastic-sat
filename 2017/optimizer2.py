@@ -224,7 +224,9 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                     x0, fval, ierr, numfunc = fminbound(f, lbound, ubound, args=(
                         row, np.delete(varvector, row), tag, datfile, trials, othervector, A, weight,
                         runtime, verbose, plotenabled), full_output=True, xtol=1)
-                    varvector[row] = int(round(x0))
+
+                    if fval < 0:
+                        varvector[row] = int(round(x0))
 
                 if fval < 0:
                     fmin = fval
