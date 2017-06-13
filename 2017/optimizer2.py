@@ -69,7 +69,7 @@ def tryLUT(tag, filename, trials, dT, A, psize, weight=None, runtime=None, plote
         raise Exception("Vectors dT, A and psize are not the same length!")
 
     bins = len(dT)
-    lut = tag + ".LUT.txt"
+    lut = tag + ".lut"
 
     psize = map(round, psize)
     psize = map(int, psize)
@@ -238,7 +238,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                     printf(fmin)
 
                     # Store the best var
-                    lut = tag + ".OPTIMAL." + var + ".txt"
+                    lut = tag + ".OPTIMAL." + var + ".lut"
                     if var == "dT":
                         makeLUT(lut, bins, varmin, A, psize)
                     elif var == "psize":
@@ -285,7 +285,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
 
         changedLUT = False
 
-        lut = tag + ".LUT.txt"
+        lut = tag + ".lut"
         makeLUT(lut, bins, dT, A, psize)
 
         while True:
@@ -322,7 +322,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                 fmin = min([fmin1, fmin2])
 
     if var == "both":
-        lut = tag + ".LUT.txt"
+        lut = tag + ".lut"
         fmin, dT, A = branchLUT(lut, tag, datfile, trials, weight, runtime, recursion_level, email, plotenabled, verbose, start)
     elif var == 'A':
         A = varmin.copy()
@@ -396,7 +396,7 @@ def branchLUT(lut, tag, datfile, trials, weight, runtime, recursion_level, email
     A = np.insert(A, maxI, A[maxI])
     psizes = np.insert(psizes, maxI, psizes[maxI])
 
-    lut = lut.rstrip(".txt") + "." + str(recursion_level) + ".txt"
+    lut = lut.rstrip(".lut") + "." + str(recursion_level) + ".lut"
 
     if verbose:
         print("###########################################################")
