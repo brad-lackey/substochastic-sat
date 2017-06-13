@@ -4,6 +4,7 @@ from optimizeLUT import parseLUT, sendEmail, plotLUT, plotPsize, tryLUT
 from histAnalysis import parseOUT
 import matplotlib.pyplot as plt
 import sys
+import numpy as np
 
 if __name__ == "__main__":
 
@@ -16,6 +17,7 @@ if __name__ == "__main__":
     tag = sys.argv[3]
 
     optima = {}
+    times = {}
     ratio = {}
 
     with open(datfile, 'r') as f:
@@ -23,8 +25,11 @@ if __name__ == "__main__":
         while len(line) > 0:
             fname, oLbl, _, oStr, tLbl, _, tStr = line.split()
 
-            optimum = oStr.split('=')[-1].strip()
+            optimum = int(oStr.split('=')[-1].strip())
             optima[fname] = optimum
+            t = float(tStr.split('=')[-1].strip())
+            times[fname] = t
+
 
             line = f.readline()
 
@@ -49,13 +54,34 @@ if __name__ == "__main__":
 
     outfile = tag + ".out"
 
-    files, times, loops, updates = parseOUT(outfile)
+    files, _times, _loops, updates = parseOUT(outfile)
 
     x = []
     y = []
     for i in range(len(files)):
         x.append(ratio[files[i]])
         y.append(updates[i])
+
+    x = np.array(x)
+
+    hist, edges = np.histogram(x, len(files))
+
+    avgs = (edges[1:] + edges[:-1])/2
+
+    for i in range(len(hist)):
+        if hist[i] > 0:
+            indices = np.flatnonzero(np.logical_and(x >= edges[i], x < edges[i+1]))
+            datfile = tag + ".{0:.3f}.dat".format(avgs[i])
+
+            with open(datfile, 'w') as f:
+                for j in indices:
+                    f.write(files[j])
+                    f.write("   ")
+                    f.write("O = {0}   T = {1}\n".format(optima[files[j]], times[files[j]]))
+
+
+
+
 
     print("Ratio:{0}\nUpdates:{1}\n".format(x, y))
 
