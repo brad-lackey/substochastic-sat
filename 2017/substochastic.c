@@ -170,11 +170,11 @@ int main(int argc, char **argv){
       }
     }
     
-    if ( time_spent > 30 ){
+    if ( time_spent > 120 ){
       return 1;
     }
     
-    if ( time_spent > 120 ){
+/*    if ( time_spent > 120 ){
       
       weight = pop->sat->total_weight/150000.0;
       runtime = 8000000.0;
@@ -184,7 +184,7 @@ int main(int argc, char **argv){
       weight = 0.95*weight + 0.05*end_weight;
       runtime += runstep;
       
-    }
+    }*/
     
 
 #if TRACK_GLOBAL_BIASES
