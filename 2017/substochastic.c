@@ -1,7 +1,7 @@
 /** @file  substochastic.c
  * @brief Main file for Substochastic Monte Carlo.
  *
- * Created by Brad Lackey on 3/14/16. Last modified 6/7/7.
+ * Created by Brad Lackey on 3/14/16. Last modified 6/14/17.
  */
 
 #include <stdio.h>
@@ -27,6 +27,8 @@ extern int nbts;
 extern int arraysize;
 extern int problem_type;
 extern potential_t topweight;
+extern int lenW;
+extern int *W;
 
 static int popsize,runmode;
 static double weight, end_weight, runtime, runstep;
@@ -38,7 +40,7 @@ static potential_t optimal;
 void update(double a, double b, double mean, Population P, int parity);
 int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut);
 int descend(Population P);
-
+void shuffleBits();
 
 int main(int argc, char **argv){
   int parity, try, err, updates;
@@ -92,12 +94,16 @@ int main(int argc, char **argv){
   min = pop->winner->potential;
   if (min <= optimal) exit(0);
   
-  try = 1;
+  try = 0;
   updates = 0;
+  parity = 0;
+  
   while (1) {
-    parity = 0;
 //    randomPopulation(pop,popsize);
     local_min = min;
+    
+    // Here's the hook for changing which bits the walkers use
+    lenW = nbts; shuffleBits();
 
     for(int time_index=0; time_index < lut->nrows; time_index++) {
       a = lut->vals[time_index];
@@ -107,7 +113,7 @@ int main(int argc, char **argv){
 // Can readjust population size according to schedule here.
       popsize = lut->psizes[time_index];
       reallocatePopulation(pop, popsize, parity);
-            
+      
 //      printf("%u: %lf, %lf\n", time_index, lut->times[time_index], lut->vals[time_index]);
 
       t = 0;
@@ -208,7 +214,7 @@ int main(int argc, char **argv){
 
 int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
   SAT sat;
-  int seed;
+  int i, seed;
   FILE *fp;
   Population pop;
   
@@ -377,6 +383,13 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
     
   }
 
+  // Initialize the array of indices where walkers will walk.
+  // Right now this is set to all the variables.
+  lenW = sat->num_vars;
+  W = (int *) malloc(lenW*sizeof(int));
+  for (i=0; i<lenW; ++i)
+    W[i] = i;
+  
   
   // Break out of attempt to put way too large a problem into the system.
   if ( runtime > 8000000 ) {
@@ -535,5 +548,17 @@ int descend(Population P){
     freeBitstring(stack + i);
   
   return 0;
+}
+
+// Fisher-Yates
+void shuffleBits(){
+  int i,r,temp;
+  
+  for (i=nbts-1; i>0; --i) {
+    r = lrand48() % (i+1);
+    temp = W[r];
+    W[r] = W[i];
+    W[i] = temp;
+  }
 }
 

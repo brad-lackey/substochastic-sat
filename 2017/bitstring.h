@@ -13,6 +13,8 @@
 
 int nbts;      ///< The length of bitstrings (in number of bits).
 int blen;      ///< The length of bitstrings (in number of words).
+int *W;
+int lenW;
 
 
 /// The underlying type for a weighted bitstring.

@@ -151,10 +151,12 @@ int randomBitFlip(Bitstring bst_out, Bitstring bst_in){
 //  word_t j;
   
   // Choose a random bit.
-  i = lrand48() % nbts;
+  i = lrand48() % lenW;
+  i = W[i];
+  //i = lrand48() % nbts;
   
   // Find the value of the bit.
- // j = (bst_in->node[i/VARIABLE_NUMB_BITS] >> (i % VARIABLE_NUMB_BITS)) & 1;
+  // j = (bst_in->node[i/VARIABLE_NUMB_BITS] >> (i % VARIABLE_NUMB_BITS)) & 1;
   
   j = flipBit(bst_out, bst_in, i);
   
