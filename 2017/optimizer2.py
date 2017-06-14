@@ -16,7 +16,7 @@ BOUND_MULTIPLIER = 1.1  # fraction over which the bound can extend
 UPDATE_PENALTY = 10000000  # penalty to give scripts which timeout
 N_ITERS_CAP = 5  # max number of optimization iterations
 RECURSION_LIMIT = 5  # max levels optimizer can branch LUT
-THRESHOLD = 0.1  # min threshold before accepting new minimum
+THRESHOLD = 0.25  # min threshold before accepting new minimum
 
 def main():
     args = sys.argv
