@@ -105,7 +105,8 @@ int main(int argc, char **argv){
     // Here's the hook for changing which bits the walkers use
     lenW = nbts; shuffleBits();
 
-    for(int time_index=0; time_index < lut->nrows; time_index++) {
+    int time_index;
+    for(time_index=0; time_index < lut->nrows; time_index++) {
       a = lut->vals[time_index];
       b = 1 - a;
       a *= weight;
@@ -132,7 +133,7 @@ int main(int argc, char **argv){
 //          dt = runtime - t;
 
         update(a*dt, b*dt, mean, pop, parity);
-        updates++;
+        updates += pop->psize;
 
         end = clock();
         time_spent = (double) (end - beg) / CLOCKS_PER_SEC;

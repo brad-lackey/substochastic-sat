@@ -7,6 +7,7 @@ from optimizeLUT import sendEmail
 
 def parseOUT(filename):
 
+    files = []
     times = []
     loops = []
     updates = []
@@ -14,15 +15,16 @@ def parseOUT(filename):
     with open(filename, 'r') as f:
         line = f.readline()
         while len(line) > 0:
-            _, _, tStr, loopStr, uStr = line.split()
+            file, _, tStr, loopStr, uStr = line.split()
 
+            files.append(file)
             times.append(float(tStr))
             loops.append(int(loopStr))
             updates.append(int(uStr))
 
             line = f.readline()
 
-    return times, loops, updates
+    return files, times, loops, updates
 
 if __name__ == "__main__":
 
@@ -52,7 +54,7 @@ if __name__ == "__main__":
 
     sendEmail("Histogram analysis done.")
 
-    times, loops, updates = parseOUT(tag + ".out")
+    _, times, loops, updates = parseOUT(tag + ".out")
 
     plt.figure(0)
     plt.hist(times, 100)

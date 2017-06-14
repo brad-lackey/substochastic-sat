@@ -145,7 +145,7 @@ def main():
                 print("Enter population sizes (separated by spaces, if single, then uniform):")
                 psize = raw_input().split()
 
-            # float verification
+            # int verification
             map(int, psize)
 
             if len(psize) == 1:
