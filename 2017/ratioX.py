@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     bins, dT, A, psize = parseLUT(lut)
 
-    tryLUT(tag, datfile, 1, dT, A, psize)
+    tryLUT(var, tag, datfile, 1, dT, A, psize)
 
     outfile = tag + ".out"
 

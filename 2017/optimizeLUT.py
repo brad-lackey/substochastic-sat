@@ -72,7 +72,7 @@ def parseTXT(txtfile):
     return hit, updates, factor
 
 """Returns the avg updates of a set of conf files using given LUT"""
-def tryLUT(tag, filename, trials, dT, A, psize, weight=None, runtime=None, plotenabled=False, verbose=False):
+def tryLUT(var, tag, filename, trials, dT, A, psize, weight=None, runtime=None, plotenabled=False, verbose=False):
     if len(dT) != len(A) or len(psize) != len(dT) or len(psize) != len(A):
         raise Exception("Vectors dT, A and psize are not the same length!")
 
@@ -109,7 +109,6 @@ def tryLUT(tag, filename, trials, dT, A, psize, weight=None, runtime=None, plote
         updates += (1+factor)*UPDATE_PENALTY
 
     if plotenabled:
-        global var
         if var == 'psize':
             plotPsize(dT, psize)
         else:
@@ -229,7 +228,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
             sendEmail(msg)
 
     # set initial minimum to initial LUT performance
-    fmin = tryLUT(tag, datfile, trials, dT, A, psize, weight, runtime, plotenabled, verbose)
+    fmin = tryLUT(var, tag, datfile, trials, dT, A, psize, weight, runtime, plotenabled, verbose)
 
     if recursion_level >= RECURSION_LIMIT:
         return fmin, dT, A, psize
@@ -465,20 +464,20 @@ def getMinimizer(var):
 
                 dT = np.diff(edges)
 
-                return tryLUT(tag, filename, trials, dT, A, psize, weight, runtime, p, v)
+                return tryLUT(var, tag, filename, trials, dT, A, psize, weight, runtime, p, v)
         else:
-            f = lambda x1, i, x2, a1, a2, a3, a4, psize, a5, a6, v, p: tryLUT(a1, a2, a3, np.insert(x2, i, x1),
+            f = lambda x1, i, x2, a1, a2, a3, a4, psize, a5, a6, v, p: tryLUT(var, a1, a2, a3, np.insert(x2, i, x1),
                                                                        a4, psize, a5,
                                                                        a6, verbose=v,
                                                                        plotenabled=p)  # rearranging the arguments for dT
     elif var == 'A':
-        f = lambda x1, i, x2, a1, a2, a3, a4, psize, a5, a6, v, p: tryLUT(a1, a2, a3, a4, np.insert(x2, i, x1), psize, a5,
+        f = lambda x1, i, x2, a1, a2, a3, a4, psize, a5, a6, v, p: tryLUT(var, a1, a2, a3, a4, np.insert(x2, i, x1), psize, a5,
                                                                    a6, verbose=v,
                                                                    plotenabled=p)  # rearranging the arguments for A
     elif var == 'both':
         return None
     elif var == 'psize':
-        f = lambda x1, i, x2, a1, a2, a3, a4, a5, a6, a7, v, p: tryLUT(a1, a2, a3, a4, a5, np.insert(x2, i, x1), a6, a7, verbose=v, plotenabled=p)
+        f = lambda x1, i, x2, a1, a2, a3, a4, a5, a6, a7, v, p: tryLUT(var, a1, a2, a3, a4, a5, np.insert(x2, i, x1), a6, a7, verbose=v, plotenabled=p)
     else:
         raise Exception("Invalid variable argument! Must be \"dT\", \"A\", \"psize\" or \"both\"")
     return f
