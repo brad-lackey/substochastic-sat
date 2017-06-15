@@ -46,15 +46,12 @@ class Optimizer(Annealer):
             # if var == psize
             lbound, ubound = max([self.state[self.row]-4, 8]), self.state[self.row]+4
 
-        scale = 0.1
-        diff = (ubound-lbound)*0.5
-
         # perturb the given row
-        self.state[self.row] += np.random.randn() * scale * diff
+        self.state[self.row] = np.random.uniform(lbound, ubound)
 
-        # check bounds
-        self.state[self.row] = min([ubound, self.state[self.row]])
-        self.state[self.row] = max([lbound, self.state[self.row]])
+        # # check bounds
+        # self.state[self.row] = min([ubound, self.state[self.row]])
+        # self.state[self.row] = max([lbound, self.state[self.row]])
 
 
 
