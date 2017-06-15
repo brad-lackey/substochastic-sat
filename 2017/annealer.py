@@ -180,7 +180,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                 opt.copy_strategy = "slice"
 
                 opt.Tmax = 5000000/float(trials)  # Max (starting) temperature
-                opt.Tmin = 1000000/float(trials)      # Min (ending) temperature
+                opt.Tmin = 100000/float(trials)      # Min (ending) temperature
                 opt.steps = 100   # Number of iterations
                 opt.updates = 100   # Number of updates (by default an update prints to stdout)
 
