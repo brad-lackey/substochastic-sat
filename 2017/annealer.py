@@ -131,8 +131,6 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
     # Load initial conditions for dT and A
     bins, dT, A, psize = parseLUT(lutfile)
 
-    f = getMinimizer(var)
-
     def printf(fval):
         if verbose:
             print("#################### Found new minimum: " + str(fval) + " ####################")
@@ -164,7 +162,6 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
 
         # i -> iteration
         for i in range(N_ITERS_CAP):
-            fval = 0.0
 
             if xpmt != 0:
                 np.random.shuffle(indices)  # shuffles the indices array for random choice of index to optimize
@@ -182,6 +179,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
 
                 opt = Optimizer(var, row, varvector.tolist(), other1, other2, tag, datfile, trials, plotenabled, verbose)
 
+                # the state vector can simply be copied by slicing
                 opt.copy_strategy = "slice"
 
                 opt.Tmax = 5000000/float(trials)  # Max (starting) temperature
