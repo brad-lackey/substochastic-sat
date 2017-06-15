@@ -23,13 +23,12 @@ THRESHOLD = 0.25  # min threshold before accepting new minimum
 class Optimizer(Annealer):
     """Optimize using simulated annealing"""
 
-    def __init__(self, var, row, state, other1, other2, tag, datfile, trials, plotenabled=False, verbose=False):
+    def __init__(self, var, state, other1, other2, tag, datfile, trials, plotenabled=False, verbose=False):
         self.other1, self.other2 = other1, other2
         self.tag = tag
         self.datfile = datfile
         self.trials = trials
         self.var = var
-        self.row = row
         self.forward = True
         self.plotenabled, self.verbose = plotenabled, verbose
         super(Optimizer, self).__init__(state)
@@ -38,20 +37,22 @@ class Optimizer(Annealer):
         """Perturb the current index randomly"""
         bins = len(self.state)
 
-        if self.var == "A":
-            lbound, ubound = 0.1, 1.0
-        elif self.var == "dT":
-            lbound, ubound = 0.1, 100.0
-        else:
-            # if var == psize
-            lbound, ubound = max([self.state[self.row]-4, 8]), self.state[self.row]+4
+        for row in range(len(self.state)):
 
-        # perturb the given row
-        self.state[self.row] = np.random.uniform(lbound, ubound)
+            if self.var == "A":
+                lbound, ubound = 0.1, 1.0
+            elif self.var == "dT":
+                lbound, ubound = 0.1, 100.0
+            else:
+                # if var == psize
+                lbound, ubound = max([self.state[row]-4, 8]), self.state[row]+4
 
-        # # check bounds
-        # self.state[self.row] = min([ubound, self.state[self.row]])
-        # self.state[self.row] = max([lbound, self.state[self.row]])
+            # perturb the given row
+            self.state[row] = np.random.uniform(lbound, ubound)
+
+            # # check bounds
+            # self.state[self.row] = min([ubound, self.state[self.row]])
+            # self.state[self.row] = max([lbound, self.state[self.row]])
 
 
 
@@ -148,97 +149,52 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
     elif var == "psize":
         varmin = psize.copy()
 
-    if xpmt == 0:
-        indices = np.concatenate((np.arange(bins), np.arange(bins-2)[::-1] + 1))  # [0 1 2 .. bins-1 .. 2 1]
-    else:
-        indices = np.concatenate((np.arange(bins), np.arange(bins)))
-
     if var != "both":
 
         newLUT = False
 
-        # i -> iteration
-        for i in range(N_ITERS_CAP):
+        if var == "dT":
+            varvector, other1, other2 = dT, A, psize
+        elif var == "A":
+            varvector, other1, other2 = A, dT, psize
+        else:
+            varvector, other1, other2 = psize, dT, A
 
-            if xpmt != 0:
-                np.random.shuffle(indices)  # shuffles the indices array for random choice of index to optimize
+        opt = Optimizer(var, varvector.tolist(), other1, other2, tag, datfile, trials, plotenabled, verbose)
 
-            minFound = False
+        # the state vector can simply be copied by slicing
+        opt.copy_strategy = "slice"
 
+        opt.Tmax = 5000000/float(trials)  # Max (starting) temperature
+        opt.Tmin = 100000/float(trials)      # Min (ending) temperature
+        opt.steps = 1000   # Number of iterations
 
-            for row in indices:
-                if var == "dT":
-                    varvector, other1, other2 = dT, A, psize
-                elif var == "A":
-                    varvector, other1, other2 = A, dT, psize
-                else:
-                    varvector, other1, other2 = psize, dT, A
+        vlist, fval = opt.anneal()
 
-                opt = Optimizer(var, row, varvector.tolist(), other1, other2, tag, datfile, trials, plotenabled, verbose)
+        varvector[:] = vlist[:]
 
-                # the state vector can simply be copied by slicing
-                opt.copy_strategy = "slice"
+        if fval < fmin:
+            fmin = fval
 
-                opt.Tmax = 5000000/float(trials)  # Max (starting) temperature
-                opt.Tmin = 100000/float(trials)      # Min (ending) temperature
-                opt.steps = 100   # Number of iterations
-                opt.updates = 100   # Number of updates (by default an update prints to stdout)
+            _, _, _, best_updates = parseOUT(tag + ".out")
 
-                vlist, fval = opt.anneal()
+            varmin = varvector.copy()
 
-                x0 = varvector[row] = vlist[row]
+            printf(fmin)
 
-                if fval < fmin:
-                    fmin = fval
+            # Store the best var
+            lut = tag + ".OPTIMAL." + var + ".lut"
+            if var == "dT":
+                makeLUT(lut, bins, varmin, A, psize)
+            elif var == "psize":
+                makeLUT(lut, bins, dT, A, varmin)
+            else:
+                makeLUT(lut, bins, dT, varmin, psize)
 
-                    _, _, _, best_updates = parseOUT(tag + ".out")
+            if plotenabled:
+                plt.savefig(tag + ".OPTIMAL." + var + ".png")
 
-                    varmin = varvector.copy()
-
-                    printf(fmin)
-
-                    # Store the best var
-                    lut = tag + ".OPTIMAL." + var + ".lut"
-                    if var == "dT":
-                        makeLUT(lut, bins, varmin, A, psize)
-                    elif var == "psize":
-                        makeLUT(lut, bins, dT, A, varmin)
-                    else:
-                        makeLUT(lut, bins, dT, varmin, psize)
-
-                    if plotenabled:
-                        plt.savefig(tag + ".OPTIMAL." + var + ".png")
-
-                    newLUT = minFound = True
-
-                if verbose:
-                    print(
-                        "---------- Found {0}[{1}]={2}".format(var, row, x0) + " at updates " + str(fval) +
-                        ", {0}/{1} iterations ----------".format(i + 1, N_ITERS_CAP))
-
-            if email:
-                msg = "Progress: {0}/{1} iterations complete.".format(i + 1, N_ITERS_CAP) + "\n"
-                msg += "Level: {0}\n".format(recursion_level)
-                # msg += "Time spent so far: " + str(datetime.datetime.now() - start) + '\n'
-                sendEmail(msg)
-
-            if not minFound:
-                print("No changes detected. Breaking out of loop...")
-
-                msg = "Optimization converged at {0}, with {1}={2}".format(fmin, var, varmin)
-                if email:
-                    sendEmail(msg)
-                if verbose:
-                    print(msg)
-
-                if not newLUT:
-                    msg = "No improvements after {0} levels. Finishing up...".format(recursion_level)
-                    if verbose:
-                        print(msg)
-                    if email:
-                        sendEmail(msg)
-                    return fmin, dT, A, psize
-                break
+            newLUT = minFound = True
 
     else:
         fmin1 = fmin2 = fmin
