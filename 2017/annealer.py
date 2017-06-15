@@ -192,7 +192,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
 
         opt.Tmax = 5000000/float(trials)  # Max (starting) temperature
         opt.Tmin = 100000/float(trials)      # Min (ending) temperature
-        opt.steps = 1000   # Number of iterations
+        opt.steps = 10000   # Number of iterations
 
         vlist, fval = opt.anneal()
 
@@ -216,8 +216,10 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
             makeLUT(lut, bins, varmin, A, psize)
         elif var == "psize":
             makeLUT(lut, bins, dT, A, varmin)
-        else:
+        elif var == "A":
             makeLUT(lut, bins, dT, varmin, psize)
+        else:
+            makeLUT(lut, bins, dT, A, psize)
 
         if plotenabled:
             plt.savefig(tag + ".OPTIMAL." + var + ".png")
