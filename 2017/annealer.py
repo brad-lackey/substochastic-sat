@@ -191,9 +191,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
 
                 vlist, fval = opt.anneal()
 
-                varvector = np.array(vlist)
-
-                x0 = varvector[row]
+                x0 = varvector[row] = vlist[row]
 
                 if fval < fmin:
                     fmin = fval
