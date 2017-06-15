@@ -149,7 +149,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
         varmin = psize.copy()
 
     if xpmt == 0:
-        indices = np.concatenate((np.arange(bins), np.arange(bins-1)[::-1]))  # [0 1 2 .. bins-1 .. 2 1 0]
+        indices = np.concatenate((np.arange(bins), np.arange(bins-2)[::-1] + 1))  # [0 1 2 .. bins-1 .. 2 1]
     else:
         indices = np.concatenate((np.arange(bins), np.arange(bins)))
 
