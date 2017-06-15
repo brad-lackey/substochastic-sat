@@ -31,21 +31,31 @@ class Optimizer(Annealer):
         self.var = var
         self.forward = True
         self.plotenabled, self.verbose = plotenabled, verbose
-        super(Optimizer, self).__init__(state)
+
+        if var == "all":
+            fullstate = state + other1 + other2
+        else:
+            fullstate = state
+        super(Optimizer, self).__init__(fullstate)
 
     def move(self):
         """Perturb the current index randomly"""
-        bins = len(self.state)
+        bins = len(self.other1)
 
-        for row in range(len(self.state)):
-
+        for row in range(bins):
             if self.var == "A":
                 lbound, ubound = 0.1, 1.0
             elif self.var == "dT":
                 lbound, ubound = 0.1, 100.0
-            else:
-                # if var == psize
+            elif self.var == "psize":
                 lbound, ubound = max([self.state[row]-4, 8]), self.state[row]+4
+            else:
+                self.state[row] = np.random.uniform(0.1, 100.0)  # perturb dT
+                self.state[bins+row] = np.random.uniform(0.1, 1.0)  # perturb A
+                self.state[bins+bins+row] = np.random.random_integers(max([self.other2[row]-4, 8]), self.other2[row]+4)  # perturb psize
+
+                continue
+
 
             # perturb the given row
             self.state[row] = np.random.uniform(lbound, ubound)
@@ -57,8 +67,6 @@ class Optimizer(Annealer):
 
 
     def energy(self):
-        e = 10000000000
-
         if self.var == "A":
             e = tryLUT(self.var, self.tag, self.datfile, self.trials, self.other1, self.state, self.other2,
                        plotenabled=self.plotenabled, verbose=self.verbose)
@@ -67,6 +75,12 @@ class Optimizer(Annealer):
                        plotenabled=self.plotenabled, verbose=self.verbose)
         elif self.var == "psize":
             e = tryLUT(self.var, self.tag, self.datfile, self.trials, self.other1, self.other2, self.state,
+                       plotenabled=self.plotenabled, verbose=self.verbose)
+        else:
+            bins = len(self.other1)
+
+            e = tryLUT(self.var, self.tag, self.datfile, self.trials, self.state[:bins],
+                       self.state[bins:(bins+bins)], self.state[(bins+bins):],
                        plotenabled=self.plotenabled, verbose=self.verbose)
 
         return e
@@ -87,29 +101,23 @@ def main():
     if '-p' in args:
         plotenabled = True
         args.remove('-p')
-    if len(args) == 7 or len(args) == 9:
+    if len(args) == 6 or len(args) == 8:
         global var
         var = args[1]
-        global xpmt
-        xpmt = int(args[2])
 
-        if xpmt < 0 or xpmt > 2:
-            print("Usage: ./annealer.py dT|A|psize|both <experiment_type (0:fwd/bwd, 1:2 rnd, 2:2 no-cons rnd)> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
-            return 1
-
-        lutfile = args[3]
-        datfile = args[4]
-        trials = args[5]
-        tag = args[6]
+        lutfile = args[2]
+        datfile = args[3]
+        trials = args[4]
+        tag = args[5]
         weight = None
         runtime = None
 
-        if len(args) == 9:
-            weight = args[7]
-            runtime = args[8]
+        if len(args) == 8:
+            weight = args[6]
+            runtime = args[7]
 
     else:
-        print("Usage: ./annealer.py dT|A|psize|both <experiment_type (0:fwd/bwd, 1:2 rnd, 2:2 no-cons rnd)> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
+        print("Usage: ./annealer.py dT|A|psize|all [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
         return 1
 
     optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_level=0, email=email, verbose=verbose, plotenabled=plotenabled)
@@ -139,19 +147,18 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
     # set initial minimum to initial LUT performance
     fmin = tryLUT(var, tag, datfile, trials, dT, A, psize, weight, runtime, plotenabled, verbose)
 
-    if recursion_level >= RECURSION_LIMIT:
-        return fmin, dT, A, psize
-
     if var == 'dT':
         varmin = dT.copy()
     elif var == 'A':
         varmin = A.copy()
     elif var == "psize":
         varmin = psize.copy()
+    elif var == "all":
+        pass
+    else:
+        raise Exception("Invalid variable argument! Must be \"dT\", \"A\", \"psize\" or \"all\"")
 
-    if var != "both":
-
-        newLUT = False
+    if var != "all":
 
         if var == "dT":
             varvector, other1, other2 = dT, A, psize
@@ -173,69 +180,48 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
 
         varvector[:] = vlist[:]
 
-        if fval < fmin:
-            fmin = fval
 
-            _, _, _, best_updates = parseOUT(tag + ".out")
-
-            varmin = varvector.copy()
-
-            printf(fmin)
-
-            # Store the best var
-            lut = tag + ".OPTIMAL." + var + ".lut"
-            if var == "dT":
-                makeLUT(lut, bins, varmin, A, psize)
-            elif var == "psize":
-                makeLUT(lut, bins, dT, A, varmin)
-            else:
-                makeLUT(lut, bins, dT, varmin, psize)
-
-            if plotenabled:
-                plt.savefig(tag + ".OPTIMAL." + var + ".png")
-
-            newLUT = minFound = True
 
     else:
-        fmin1 = fmin2 = fmin
+        varvector, other1, other2 = dT, A, psize
 
-        changedLUT = False
+        opt = Optimizer(var, varvector.tolist(), other1.tolist(), other2.tolist(), tag, datfile, trials, plotenabled, verbose)
 
-        lut = tag + ".lut"
-        makeLUT(lut, bins, dT, A, psize)
+        # the state vector can simply be copied by slicing
+        opt.copy_strategy = "slice"
 
-        while True:
+        opt.Tmax = 5000000/float(trials)  # Max (starting) temperature
+        opt.Tmin = 100000/float(trials)      # Min (ending) temperature
+        opt.steps = 1000   # Number of iterations
 
-            fmin1, new_dT, new_A, new_psize = optimizeLUT('A', lut, datfile, trials, tag, weight, runtime,
-                                               recursion_level=recursion_level, email=email, verbose=verbose,
-                                               plotenabled=plotenabled, start=start)
+        vlist, fval = opt.anneal()
 
-            if fmin1 < fmin2 and fmin1 < fmin:
-                makeLUT(lut, bins, new_dT, new_A, new_psize)
-                changedLUT = True
+        varvector[:] = vlist[:bins]
+        other1[:] = vlist[bins:(bins+bins)]
+        other2[:] = vlist[(bins+bins):]
 
-            fmin2, new_dT, new_A, new_psize = optimizeLUT('dT', lut, datfile, trials, tag, weight, runtime,
-                                               recursion_level=recursion_level, email=email, verbose=verbose,
-                                               plotenabled=plotenabled, start=start)
 
-            if fmin2 < fmin1 and fmin2 < fmin:
-                makeLUT(lut, bins, new_dT, new_A, new_psize)
-                changedLUT = True
+    if fval < fmin:
+        fmin = fval
 
-            if fmin1 > fmin and fmin2 > fmin:
-                if changedLUT:
-                    # if it cannot improve it past the fmin, save the best schedule and break the loop
-                    if verbose:
-                        print("Cannot improve past fmin. Breaking out of loop...")
-                    break
-                else:
-                    # if it hasn't improved the given schedule at all, return and break out of the recursion...our job
-                    #  is done.
-                    if verbose:
-                        print("No improvements detected. Returning fmin = {0}".format(fmin))
-                    return fmin, dT, A, psize
-            else:
-                fmin = min([fmin1, fmin2])
+        _, _, _, best_updates = parseOUT(tag + ".out")
+
+        varmin = varvector.copy()
+
+        printf(fmin)
+
+        # Store the best var
+        lut = tag + ".OPTIMAL." + var + ".lut"
+        if var == "dT":
+            makeLUT(lut, bins, varmin, A, psize)
+        elif var == "psize":
+            makeLUT(lut, bins, dT, A, varmin)
+        else:
+            makeLUT(lut, bins, dT, varmin, psize)
+
+        if plotenabled:
+            plt.savefig(tag + ".OPTIMAL." + var + ".png")
+
 
     if var == "both":
         lut = tag + ".lut"
