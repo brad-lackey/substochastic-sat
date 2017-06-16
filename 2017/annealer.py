@@ -11,6 +11,7 @@ import sys
 from createLUT import makeLUT
 from histAnalysis import parseOUT
 from simanneal import Annealer
+import math
 
 BOUND_CAP = 0.1  # cap on the bounds
 BOUND_MULTIPLIER = 1.1  # fraction over which the bound can extend
@@ -45,26 +46,33 @@ class Optimizer(Annealer):
         for row in range(bins):
             if self.var == "A":
                 lbound, ubound = 0.1, 1.0
+                mu_diff, sigma = 0.05, 0.05
             elif self.var == "dT":
                 lbound, ubound = 0.1, 100.0
+                mu_diff, sigma = 0.5, 0.5
             elif self.var == "psize":
-                lbound, ubound = max([self.state[row]-4, 8]), self.state[row]+4
+                lbound, ubound = 16, 128
+                mu_diff, sigma = 5, 5
             else:
-                self.state[row] = np.random.uniform(0.1, 100.0)  # perturb dT
-                self.state[bins+row] = np.random.uniform(0.1, 1.0)  # perturb A
-                self.state[bins+bins+row] = np.random.random_integers(max([self.other2[row]-4, 8]), self.other2[row]+4)  # perturb psize
-
+                self.walk(row, 0.5, 0.5, 0.1, 100.0)  # perturb dT
+                self.walk(bins+row, 0.05, 0.05, 0.1, 1.0)  # perturb A
+                self.walk(bins+bins+row, 5, 5, 16, 128)
                 continue
 
+            self.walk(row, mu_diff, sigma, lbound, ubound)
 
-            # perturb the given row
-            self.state[row] = np.random.uniform(lbound, ubound)
+    def walk(self, row, mu_diff, sigma, lbound, ubound):
+        # perturb the given row
+        coin = np.random.randint(2)
+        mu = self.state[row]
+        if coin == 0:
+            self.state[row] = sigma * np.random.randn() + mu - mu_diff
+        else:
+            self.state[row] = sigma * np.random.randn() + mu + mu_diff
 
-            # # check bounds
-            # self.state[self.row] = min([ubound, self.state[self.row]])
-            # self.state[self.row] = max([lbound, self.state[self.row]])
-
-
+        # check bounds
+        self.state[row] = min([ubound, self.state[row]])
+        self.state[row] = max([lbound, self.state[row]])
 
     def energy(self):
         if self.var == "A":
@@ -172,11 +180,15 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
         # the state vector can simply be copied by slicing
         opt.copy_strategy = "slice"
 
-        opt.Tmax = 5000000/float(trials)  # Max (starting) temperature
-        opt.Tmin = 100000/float(trials)      # Min (ending) temperature
+        # sample std is proportional to sqrt(N)
+        opt.Tmax = 500000/math.sqrt(float(trials))  # Max (starting) temperature
+        opt.Tmin = 10000/math.sqrt(float(trials))      # Min (ending) temperature
         opt.steps = 1000   # Number of iterations
 
-        vlist, fval = opt.anneal()
+        try:
+            vlist, fval = opt.anneal()
+        except Exception:
+            vlist, fval = opt.best_state, opt.best_energy
 
         varvector[:] = vlist[:]
 
@@ -190,11 +202,14 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
         # the state vector can simply be copied by slicing
         opt.copy_strategy = "slice"
 
-        opt.Tmax = 5000000/float(trials)  # Max (starting) temperature
-        opt.Tmin = 100000/float(trials)      # Min (ending) temperature
-        opt.steps = 10000   # Number of iterations
+        opt.Tmax = 500000/math.sqrt(float(trials))  # Max (starting) temperature
+        opt.Tmin = 10000/math.sqrt(float(trials))      # Min (ending) temperature
+        opt.steps = 1000   # Number of iterations
 
-        vlist, fval = opt.anneal()
+        try:
+            vlist, fval = opt.anneal()
+        except Exception:
+            vlist, fval = opt.best_state, opt.best_energy
 
         varvector[:] = vlist[:bins]
         other1[:] = vlist[bins:(bins+bins)]
@@ -203,8 +218,6 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
 
     if fval < fmin:
         fmin = fval
-
-        _, _, _, best_updates = parseOUT(tag + ".out")
 
         varmin = varvector.copy()
 
@@ -225,35 +238,31 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
             plt.savefig(tag + ".OPTIMAL." + var + ".png")
 
 
-    if var == "both":
-        lut = tag + ".lut"
-        fmin, dT, A = branchLUT(lut, tag, datfile, trials, weight, runtime, recursion_level, email, plotenabled, verbose, start)
-    elif var == 'A':
+    if var == 'A':
         A = varmin.copy()
     elif var == 'psize':
         psize = varmin.copy()
     else:
         dT = varmin.copy()
 
-    if recursion_level == 0:
-        if verbose:
-            # Print the best updates
-            print("Best # updates: " + str(fmin))
-        if plotenabled:
-            if var == "psize":
-                plotPsize(dT, psize)
-            else:
-                plotLUT(dT, A)
-        if email:
-            if var == "both":
-                msg = "Optimization finished after " + str(datetime.datetime.now() - start) + \
-                      ", at " + datetime.datetime.now().strftime("%a %d/%m/%y %H:%M:%S") + \
-                      "!\nOptimal dT: {0}\nOptimal A: {1}\nOptimum # updates: {2}\n".format(dT, A, fmin)
-            else:
-                msg = "Optimization finished after " + str(datetime.datetime.now() - start) + \
-                      ", at " + datetime.datetime.now().strftime("%a %d/%m/%y %H:%M:%S") + \
-                      "!\nOptimal " + var + ": " + str(varmin) + "\nOptimum # updates: " + str(fmin) + "\n"
-            sendEmail(msg)
+    if verbose:
+        # Print the best updates
+        print("Best # updates: " + str(fmin))
+    if plotenabled:
+        if var == "psize":
+            plotPsize(dT, psize)
+        else:
+            plotLUT(dT, A)
+    if email:
+        if var == "both":
+            msg = "Optimization finished after " + str(datetime.datetime.now() - start) + \
+                  ", at " + datetime.datetime.now().strftime("%a %d/%m/%y %H:%M:%S") + \
+                  "!\nOptimal dT: {0}\nOptimal A: {1}\nOptimum # updates: {2}\n".format(dT, A, fmin)
+        else:
+            msg = "Optimization finished after " + str(datetime.datetime.now() - start) + \
+                  ", at " + datetime.datetime.now().strftime("%a %d/%m/%y %H:%M:%S") + \
+                  "!\nOptimal " + var + ": " + str(varmin) + "\nOptimum # updates: " + str(fmin) + "\n"
+        sendEmail(msg)
 
     return fmin, dT, A, psize
 
