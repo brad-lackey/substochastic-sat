@@ -137,6 +137,7 @@ int main(int argc, char **argv){
 
         end = clock();
         time_spent = (double) (end - beg) / CLOCKS_PER_SEC;
+        if(time_spent > 60) return 1;
 
         if (pop->winner->potential < local_min) {
           local_min = pop->winner->potential;
@@ -387,6 +388,11 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
   // Initialize the array of indices where walkers will walk.
   // Right now this is set to all the variables.
   lenW = sat->num_vars;
+  
+  // Optimize over at most 300 variables
+/*  if (lenW > 300) {
+	lenW=300;
+  } */
   W = (int *) malloc(lenW*sizeof(int));
   for (i=0; i<lenW; ++i)
     W[i] = i;
