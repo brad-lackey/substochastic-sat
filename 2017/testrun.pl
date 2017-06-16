@@ -110,7 +110,7 @@ while( <IN> ){
         $updates{$a[0]} += $a[4];
     }
 
-    $factor{$a[0]} = ($a[1]-$opt{$a[0]})/(1+$opt{$a[0]});
+    $factor{$a[0]} = (1+$a[1])/(1+$opt{$a[0]});
 
     # REMOVE
     # print "$a[0] Factor: $factor{$a[0]}\n";
@@ -157,7 +157,7 @@ if ($hit > 0){
     printf REPORT "%.3fs ", 0.0;
     printf REPORT "%.3f loops ", 0.0;
     printf REPORT "%.3f updates ", 0;
-    printf REPORT "%.3f factor\n", $factor/$count;
+    printf REPORT "%.3f factor\n", $factor;
 }
 close(REPORT);
 

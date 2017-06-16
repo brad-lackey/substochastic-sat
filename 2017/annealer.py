@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from optimizeLUT import parseLUT, sendEmail, getABounds, plotLUT, plotPsize, tryLUT
+from optimizeLUT import parseLUT, parseTXT, sendEmail, plotLUT, plotPsize
 from scipy import stats
 from subprocess32 import check_call, TimeoutExpired
 import numpy as np
@@ -16,7 +16,7 @@ import math
 BOUND_CAP = 0.1  # cap on the bounds
 BOUND_MULTIPLIER = 1.1  # fraction over which the bound can extend
 UPDATE_PENALTY = 10000000  # penalty to give scripts which timeout
-N_ITERS_CAP = 5  # max number of optimization iterations
+N_ITERS_CAP = 1  # max number of optimization iterations
 RECURSION_LIMIT = 5  # max levels optimizer can branch LUT
 THRESHOLD = 0.25  # min threshold before accepting new minimum
 
@@ -92,6 +92,55 @@ class Optimizer(Annealer):
                        plotenabled=self.plotenabled, verbose=self.verbose)
 
         return e
+
+
+"""Returns the factor of a set of conf files using given LUT"""
+def tryLUT(var, tag, filename, trials, dT, A, psize, weight=None, runtime=None, plotenabled=False, verbose=False):
+    if len(dT) != len(A) or len(psize) != len(dT) or len(psize) != len(A):
+        raise Exception("Vectors dT, A and psize are not the same length!")
+
+    bins = len(dT)
+    lut = tag + ".lut"
+
+    psize = map(round, psize)
+    psize = map(int, psize)
+
+    makeLUT(lut, bins, dT, A, psize)
+
+    args = []
+    args.append("./testrun.pl")  # the program to run
+    args.append("./ssmc")
+    args.append(lut)
+    args.append(filename)
+    args.append(str(trials))
+    args.append(tag)
+
+    if weight and runtime:
+        args.append(weight)
+        args.append(runtime)
+
+    # returns 0 if successful otherwise throws error
+    try:
+        check_call(args)
+    except TimeoutExpired:
+        return UPDATE_PENALTY
+
+    txtfile = tag + ".txt"
+    hits, updates, factor = parseTXT(txtfile)
+
+    if hits < 1:
+        updates += factor*UPDATE_PENALTY
+
+    if plotenabled:
+        if var == 'psize':
+            plotPsize(dT, psize)
+        else:
+            plotLUT(dT, A)
+
+    if verbose:
+        print("Tried dT=" + str(dT) + ", A=" + str(A) + ", Psize=" + str(psize) + "  with factor=" + str(factor))
+
+    return factor
 
 
 def main():
@@ -180,9 +229,8 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
         # the state vector can simply be copied by slicing
         opt.copy_strategy = "slice"
 
-        # sample std is proportional to sqrt(N)
-        opt.Tmax = 500000/math.sqrt(float(trials))  # Max (starting) temperature
-        opt.Tmin = 10000/math.sqrt(float(trials))      # Min (ending) temperature
+        opt.Tmax = 10  # Max (starting) temperature
+        opt.Tmin = 0.1      # Min (ending) temperature
         opt.steps = 1000   # Number of iterations
 
         try:
@@ -202,8 +250,8 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
         # the state vector can simply be copied by slicing
         opt.copy_strategy = "slice"
 
-        opt.Tmax = 500000/math.sqrt(float(trials))  # Max (starting) temperature
-        opt.Tmin = 10000/math.sqrt(float(trials))      # Min (ending) temperature
+        opt.Tmax = 10  # Max (starting) temperature
+        opt.Tmin = 0.1      # Min (ending) temperature
         opt.steps = 1000   # Number of iterations
 
         try:
@@ -246,8 +294,8 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
         dT = varmin.copy()
 
     if verbose:
-        # Print the best updates
-        print("Best # updates: " + str(fmin))
+        # Print the best factor
+        print("Best factor: " + str(fmin))
     if plotenabled:
         if var == "psize":
             plotPsize(dT, psize)
@@ -257,45 +305,14 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
         if var == "both":
             msg = "Optimization finished after " + str(datetime.datetime.now() - start) + \
                   ", at " + datetime.datetime.now().strftime("%a %d/%m/%y %H:%M:%S") + \
-                  "!\nOptimal dT: {0}\nOptimal A: {1}\nOptimum # updates: {2}\n".format(dT, A, fmin)
+                  "!\nOptimal dT: {0}\nOptimal A: {1}\nOptimum factor: {2}\n".format(dT, A, fmin)
         else:
             msg = "Optimization finished after " + str(datetime.datetime.now() - start) + \
                   ", at " + datetime.datetime.now().strftime("%a %d/%m/%y %H:%M:%S") + \
-                  "!\nOptimal " + var + ": " + str(varmin) + "\nOptimum # updates: " + str(fmin) + "\n"
+                  "!\nOptimal " + var + ": " + str(varmin) + "\nOptimum factor: " + str(fmin) + "\n"
         sendEmail(msg)
 
     return fmin, dT, A, psize
-
-
-def getMinimizer(var):
-    # Minimize var
-    if var == 'dT':
-        if xpmt == 1:
-            def f(edge, edgeI, tag, filename, trials, dT, A, psize, weight, runtime, p=False, v=False):
-                edges = np.insert(np.cumsum(dT), 0, 0)
-
-                edges[edgeI + 1] = edge
-
-                dT = np.diff(edges)
-
-                return tryLUT(tag, filename, trials, dT, A, psize, weight, runtime, p, v)
-        else:
-            f = lambda x1, i, x2, a1, a2, a3, a4, psize, a5, a6, v, p: tryLUT(a1, a2, a3, np.insert(x2, i, x1),
-                                                                              a4, psize, a5,
-                                                                              a6, verbose=v,
-                                                                              plotenabled=p)  # rearranging the arguments for dT
-    elif var == 'A':
-        f = lambda x1, i, x2, a1, a2, a3, a4, psize, a5, a6, v, p: tryLUT(a1, a2, a3, a4, np.insert(x2, i, x1), psize, a5,
-                                                                          a6, verbose=v,
-                                                                          plotenabled=p)  # rearranging the arguments for A
-    elif var == 'both':
-        return None
-    elif var == 'psize':
-        f = lambda x1, i, x2, a1, a2, a3, a4, a5, a6, a7, v, p: tryLUT(a1, a2, a3, a4, a5, np.insert(x2, i, x1), a6, a7,
-                                                                       verbose=v, plotenabled=p)
-    else:
-        raise Exception("Invalid variable argument! Must be \"dT\", \"A\" or \"both\"")
-    return f
 
 
 def branchLUT(lut, tag, datfile, trials, weight, runtime, recursion_level, email, plotenabled, verbose, start):

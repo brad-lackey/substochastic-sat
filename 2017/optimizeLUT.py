@@ -106,7 +106,7 @@ def tryLUT(var, tag, filename, trials, dT, A, psize, weight=None, runtime=None, 
     hits, updates, factor = parseTXT(txtfile)
 
     if hits < 1:
-        updates += (1+factor)*UPDATE_PENALTY
+        updates += factor*UPDATE_PENALTY
 
     if plotenabled:
         if var == 'psize':
