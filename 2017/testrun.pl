@@ -110,7 +110,7 @@ while( <IN> ){
         $updates{$a[0]} += $a[4];
     }
 
-    $factor{$a[0]} = (1+$a[1])/(1+$opt{$a[0]});
+    $factor{$a[0]} += (1+$a[1])/(1+$opt{$a[0]});
 
     # REMOVE
     # print "$a[0] Factor: $factor{$a[0]}\n";
@@ -138,7 +138,7 @@ for $file (sort keys %count){
     $factor += $factor{$file};
     if ($hit{$file} > 0) {
         printf REPORT "(%d/%d(%.0f%%)) ", $score{$file}, $count{$file}, (100.0*$score{$file})/$hit{$file};
-        printf REPORT "%.3fs loops=%.1f updates=%.3f\n", $runtime{$file}/$hit{$file}, (1.0*$loops{$file})/$hit{$file}, $updates{$file}/$hit{$file};
+        printf REPORT "%.3fs loops=%.1f updates=%.3f factor=%.3f\n", $runtime{$file}/$hit{$file}, (1.0*$loops{$file})/$hit{$file}, $updates{$file}/$hit{$file}, $factor{$file};
     } else {
         printf REPORT "(%d/%d(%.0f%%)) ", $score{$file}, $count{$file}, 0.0;
         printf REPORT "%.3fs loops=%.1f updates=%.1f factor=%.3f\n", 0.0, 0.0, 0.0, $factor{$file};
