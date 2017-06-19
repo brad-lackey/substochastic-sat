@@ -70,7 +70,10 @@ if __name__ == "__main__":
 
     for i in range(len(hist)):
         if hist[i] > 0:
-            indices = np.flatnonzero(np.logical_and(x >= edges[i], x < edges[i+1]))
+            if i == len(hist):
+                indices = np.flatnonzero(np.logical_and(x >= edges[i], x <= edges[i+1]))
+            else:
+                indices = np.flatnonzero(np.logical_and(x >= edges[i], x < edges[i+1]))
             datfile = tag + ".{0:.3f}.dat".format(avgs[i])
 
             with open(datfile, 'w') as f:

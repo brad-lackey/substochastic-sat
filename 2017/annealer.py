@@ -1,11 +1,9 @@
 #!/usr/bin/python
 
 from optimizeLUT import parseLUT, parseTXT, sendEmail, plotLUT, plotPsize
-from scipy import stats
 from subprocess32 import check_call, TimeoutExpired
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize import fminbound
 import datetime
 import sys
 from createLUT import makeLUT
