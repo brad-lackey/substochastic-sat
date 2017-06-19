@@ -92,6 +92,17 @@ class Optimizer(Annealer):
         return e
 
 
+    def update(self, *args, **kwargs):
+        step = args[0]
+        T = args[1]
+        E = args[2]
+        acceptance = args[3]
+        improvement = args[4]
+        print("Step: {0}/{1}".format(step, self.steps))
+        print("Temperature: {0}, Energy: {1}".format(T, E))
+        print("Acceptance: {0}, Improvement: {1}".format(acceptance, improvement))
+
+
 """Returns the factor of a set of conf files using given LUT"""
 def tryLUT(var, tag, filename, trials, dT, A, psize, weight=None, runtime=None, plotenabled=False, verbose=False):
     if len(dT) != len(A) or len(psize) != len(dT) or len(psize) != len(A):
@@ -230,6 +241,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
         opt.Tmax = 10  # Max (starting) temperature
         opt.Tmin = 0.1      # Min (ending) temperature
         opt.steps = 1000   # Number of iterations
+        opt.updates = opt.steps
 
         try:
             vlist, fval = opt.anneal()
@@ -251,6 +263,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
         opt.Tmax = 10  # Max (starting) temperature
         opt.Tmin = 0.1      # Min (ending) temperature
         opt.steps = 1000   # Number of iterations
+        opt.updates = opt.steps
 
         try:
             vlist, fval = opt.anneal()
