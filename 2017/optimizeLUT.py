@@ -5,8 +5,8 @@ from subprocess32 import check_call, TimeoutExpired
 import numpy as np
 from scipy.optimize import fminbound
 import matplotlib.pyplot as plt
-import smtplib
 import datetime
+from utilities import sendEmail, parseTXT, parseLUT
 
 BOUND_CAP = 0.1  # cap on the bounds
 BOUND_MULTIPLIER = 1.1  # fraction over which the bound can extend
@@ -14,25 +14,6 @@ UPDATE_PENALTY = 10000000  # penalty to give scripts which timeout
 N_ITERS_CAP = 5  # max number of optimization iterations
 RECURSION_LIMIT = 5  # max levels optimizer can branch LUT
 
-"""Returns the dT and A vectors from a LUT file as a tuple"""
-def parseLUT(lutfile):
-
-    with open(lutfile, 'r') as f:
-        line = f.readline()
-        bins = int(line)
-        dT = np.zeros(bins)
-        A = np.zeros(bins)
-        psize = np.zeros(bins)
-        row = 0
-        while len(line) > 0:
-            line = f.readline()
-            if len(line) > 0:
-                dT[row], A[row], psize[row] = line.rstrip('\n').split('\t')
-                row += 1
-        if row != bins:
-            raise Exception("Invalid LUT file format!")
-
-    return bins, dT, A, psize
 
 
 def plotLUT(dT, A):
@@ -49,27 +30,6 @@ def plotLUT(dT, A):
     ax.autoscale_view()
     plt.draw()
 
-
-"""Returns the percentage of hits and avg runtime as a tuple"""
-def parseTXT(txtfile):
-    last = ''
-    with open(txtfile, 'r') as f:
-        line = f.readline()
-        while len(line) > 0:
-            last = line
-            line = f.readline()
-
-    # Parse last line
-    _, hitStr, _, tStr, lStr, _, uStr, _, fStr, _ = last.split()
-
-    fraction = map(float, hitStr[0:hitStr.rfind('(')].split('/'))
-    hit = fraction[0]/fraction[1]
-    loops = float(lStr)
-    t = float(tStr.rstrip("s"))
-    updates = float(uStr)
-    factor = float(fStr)
-
-    return hit, updates, factor
 
 """Returns the avg updates of a set of conf files using given LUT"""
 def tryLUT(var, tag, filename, trials, dT, A, psize, weight=None, runtime=None, plotenabled=False, verbose=False):
@@ -118,14 +78,6 @@ def tryLUT(var, tag, filename, trials, dT, A, psize, weight=None, runtime=None, 
         print("Tried dT=" + str(dT) + ", A=" + str(A) + ", Psize=" + str(psize) + "  with updates=" + str(updates))
 
     return updates
-
-
-def sendEmail(msg):
-    server = smtplib.SMTP("smtp.gmail.com", 587)
-    server.starttls()
-    server.login("email.notifier.bryanluu@gmail.com", "7788382652")
-    server.sendmail("email.notifier.bryanluu@gmail.com", "bryanluu30794@gmail.com", '\n'+msg)
-    server.quit()
 
 
 def getABounds(bins, row, varvector):

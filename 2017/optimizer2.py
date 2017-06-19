@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from optimizeLUT import parseLUT, sendEmail, getABounds, plotLUT, plotPsize
+from optimizeLUT import plotLUT, plotPsize
 from scipy import stats
 from subprocess32 import check_call, TimeoutExpired
 import numpy as np
@@ -9,7 +9,7 @@ from scipy.optimize import fminbound
 import datetime
 import sys
 from createLUT import makeLUT
-from histAnalysis import parseOUT
+from utilities import parseOUT, parseLUT, sendEmail
 
 BOUND_CAP = 0.1  # cap on the bounds
 BOUND_MULTIPLIER = 1.1  # fraction over which the bound can extend

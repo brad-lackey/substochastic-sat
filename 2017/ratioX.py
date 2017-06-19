@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
-from optimizeLUT import parseLUT, sendEmail, plotLUT, plotPsize, tryLUT
-from histAnalysis import parseOUT
+from optimizeLUT import tryLUT
+from utilities import parseLUT, parseOUT
 import matplotlib.pyplot as plt
 import sys
 import numpy as np

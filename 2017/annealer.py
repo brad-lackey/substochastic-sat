@@ -1,15 +1,14 @@
 #!/usr/bin/python
 
-from optimizeLUT import parseLUT, parseTXT, sendEmail, plotLUT, plotPsize
+from optimizeLUT import plotLUT, plotPsize
 from subprocess32 import check_call, TimeoutExpired
+from utilities import parseTXT, sendEmail
 import numpy as np
 import matplotlib.pyplot as plt
 import datetime
 import sys
 from createLUT import makeLUT
-from histAnalysis import parseOUT
 from simanneal import Annealer
-import math
 
 BOUND_CAP = 0.1  # cap on the bounds
 BOUND_MULTIPLIER = 1.1  # fraction over which the bound can extend
@@ -50,7 +49,7 @@ class Optimizer(Annealer):
                 mu_diff, sigma = 0.5, 0.5
             elif self.var == "psize":
                 lbound, ubound = 16, 128
-                mu_diff, sigma = 5, 5
+                mu_diff, sigma = 10, 10
             else:
                 self.walk(row, 0.5, 0.5, 0.1, 100.0)  # perturb dT
                 self.walk(bins+row, 0.05, 0.05, 0.1, 1.0)  # perturb A

@@ -4,27 +4,8 @@ import matplotlib.pyplot as plt
 from subprocess32 import check_call
 import time
 from optimizeLUT import sendEmail
+from utilities import parseOUT
 
-def parseOUT(filename):
-
-    files = []
-    times = []
-    loops = []
-    updates = []
-
-    with open(filename, 'r') as f:
-        line = f.readline()
-        while len(line) > 0:
-            file, _, tStr, loopStr, uStr = line.split()
-
-            files.append(file)
-            times.append(float(tStr))
-            loops.append(int(loopStr))
-            updates.append(int(uStr))
-
-            line = f.readline()
-
-    return files, times, loops, updates
 
 if __name__ == "__main__":
 
