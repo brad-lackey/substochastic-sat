@@ -70,7 +70,7 @@ if __name__ == "__main__":
 
     for i in range(len(hist)):
         if hist[i] > 0:
-            if i == len(hist):
+            if i == len(hist)-1:
                 indices = np.flatnonzero(np.logical_and(x >= edges[i], x <= edges[i+1]))
             else:
                 indices = np.flatnonzero(np.logical_and(x >= edges[i], x < edges[i+1]))
