@@ -1,6 +1,9 @@
 #!/usr/bin/python
 
+from optimizeLUT import parseLUT, sendEmail, plotLUT, plotPsize, tryLUT
+import matplotlib.pyplot as plt
 import sys
+import numpy as np
 from utilities import parseDAT, parseCNF
 
 
@@ -27,24 +30,29 @@ if __name__ == "__main__":
     for cnf in files:
         ratios.append(parseCNF(cnf))
 
-    selected_files = {}
-    selected_optima = {}
-    selected_times = {}
-    for i in range(len(files)):
-        datfile = tag + ".{0:.3f}.dat".format(ratios[i])
 
-        if datfile not in selected_files.keys():
-            selected_files[datfile] = []
-            selected_optima[datfile] = []
-            selected_times[datfile] = []
+    hist, edges = np.histogram(ratios, len(files))
 
-        selected_files[datfile].append(files[i])
-        selected_optima[datfile].append(optima[i])
-        selected_times[datfile].append(times[i])
+    avgs = (edges[1:] + edges[:-1])/2
 
-        print("Categorized file {0} under ratio {1:.3f} in DAT: {2}".format(files[i], ratios[i], datfile))
+    for i in range(len(hist)):
+        if hist[i] > 0:
+            if i == len(hist)-1:
+                indices = np.flatnonzero(np.logical_and(ratios >= edges[i], ratios <= edges[i+1]))
+            else:
+                indices = np.flatnonzero(np.logical_and(ratios >= edges[i], ratios < edges[i+1]))
+            datfile = tag + ".{0:.3f}.dat".format(avgs[i])
+
+            selected_files = []
+            selected_optima = []
+            selected_times = []
+
+            for j in indices:
+                selected_files.append(files[j])
+                selected_optima.append(optima[j])
+                selected_times.append(times[j])
+                print("Categorized file {0} under ratio {1} in DAT: {2}".format(files[j], ratios[j], datfile))
 
 
-    for datfile in selected_files.keys():
-        makeDAT(datfile, selected_files[datfile], selected_optima[datfile], selected_times[datfile])
+            makeDAT(datfile, selected_files, selected_optima, selected_times)
 
