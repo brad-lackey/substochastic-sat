@@ -16,8 +16,8 @@ def makeDAT(datfile, files, optima, times):
 
 if __name__ == "__main__":
 
-    if len(sys.argv) != 3:
-        print "Usage: ./categorizeDAT.py <DAT> tag"
+    if len(sys.argv) < 3 or len(sys.argv) > 4:
+        print "Usage: ./categorizeDAT.py <DAT> tag [bins]"
         sys.exit(1)
 
     datfile = sys.argv[1]
@@ -25,13 +25,18 @@ if __name__ == "__main__":
 
     files, optima, times = parseDAT(datfile)
 
+    if len(sys.argv) == 4:
+        bins = sys.argv[3]
+    else:
+        bins = len(files)
+
     ratios = []
 
     for cnf in files:
         ratios.append(parseCNF(cnf))
 
 
-    hist, edges = np.histogram(ratios, len(files))
+    hist, edges = np.histogram(ratios, bins)
 
     avgs = (edges[1:] + edges[:-1])/2
 
