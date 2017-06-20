@@ -3,6 +3,26 @@ import smtplib
 import numpy as np
 
 
+def parseDAT(datfile):
+
+    files = []
+    optima = []
+    times = []
+
+    with open(datfile, 'r') as f:
+        line = f.readline()
+        while len(line) > 0:
+            filename, oLbl, eq, oStr, tLbl, eq, tStr = line.split()
+
+            files.append(filename)
+            optima.append(int(oStr))
+            times.append(float(tStr))
+            
+            line = f.readline()
+
+    return files, optima, times
+
+
 def parseOUT(filename):
 
     files = []
@@ -13,9 +33,9 @@ def parseOUT(filename):
     with open(filename, 'r') as f:
         line = f.readline()
         while len(line) > 0:
-            file, _, tStr, loopStr, uStr = line.split()
+            filename, _, tStr, loopStr, uStr = line.split()
 
-            files.append(file)
+            files.append(filename)
             times.append(float(tStr))
             loops.append(int(loopStr))
             updates.append(int(uStr))
