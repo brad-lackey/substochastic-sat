@@ -2,7 +2,34 @@
 import smtplib
 import numpy as np
 
+"""Returns the ratio of a given CNF file"""
+def parseCNF(cnf):
+    with open(cnf, 'r') as f:
+        line = f.readline()
+        while len(line) > 0:
+            if line.startswith('p'):
 
+                if cnf.endswith(".cnf"):
+                    p, fmt, varStr, cStr = line.split()
+                elif cnf.endswith(".wcnf"):
+                    p, fmt, varStr, cStr, pStr = line.split()
+                else:
+                    raise Exception("Invalid CNF file: {0}".format(cnf))
+
+                var = float(varStr)
+                clauses = float(cStr)
+
+                ratio = (var/clauses)
+
+                return ratio
+
+            line = f.readline()
+
+        return None
+
+
+
+"""Returns the files, optima and times, in the given DAT file"""
 def parseDAT(datfile):
 
     files = []
@@ -17,12 +44,13 @@ def parseDAT(datfile):
             files.append(filename)
             optima.append(int(oStr))
             times.append(float(tStr))
-            
+
             line = f.readline()
 
     return files, optima, times
 
 
+"""Parse a .out file from testrun, returning the files, times, loops and updates."""
 def parseOUT(filename):
 
     files = []
@@ -65,7 +93,8 @@ def parseLUT(lutfile):
 
     return bins, dT, A, psize
 
-"""Returns the percentage of hits and avg runtime as a tuple"""
+
+"""Returns the percentage of hits, avg runtime, and factor as a tuple"""
 def parseTXT(txtfile):
     last = ''
     with open(txtfile, 'r') as f:
