@@ -2,7 +2,7 @@
 
 from optimizeLUT import plotLUT, plotPsize
 from subprocess32 import check_call, TimeoutExpired
-from utilities import parseTXT, sendEmail
+from utilities import parseTXT, parseLUT, sendEmail
 import numpy as np
 import matplotlib.pyplot as plt
 import datetime
