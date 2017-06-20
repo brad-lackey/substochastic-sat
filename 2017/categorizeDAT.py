@@ -26,7 +26,7 @@ if __name__ == "__main__":
     files, optima, times = parseDAT(datfile)
 
     if len(sys.argv) == 4:
-        bins = sys.argv[3]
+        bins = int(sys.argv[3])
     else:
         bins = len(files)
 
