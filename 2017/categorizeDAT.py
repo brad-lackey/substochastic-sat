@@ -56,7 +56,7 @@ if __name__ == "__main__":
                 selected_files.append(files[j])
                 selected_optima.append(optima[j])
                 selected_times.append(times[j])
-                print("Categorized file {0} under ratio {1} in DAT: {2}".format(files[j], ratios[j], datfile))
+            print("Categorized {0} files under ratio {1} in DAT: {2}".format(len(selected_files), avgs[i], datfile))
 
 
             makeDAT(datfile, selected_files, selected_optima, selected_times)
