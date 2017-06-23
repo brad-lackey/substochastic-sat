@@ -63,6 +63,8 @@ while ( scalar(@stack) > 0 ){
         
         $opt = -1;
         $time = -1;
+        $loops = -1;
+        $updates = -1;
         for $line (@out){
             if ($line =~ /^o/){
                 @b = split (/\s/,$line);

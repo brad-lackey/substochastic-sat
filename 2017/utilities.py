@@ -54,6 +54,7 @@ def parseDAT(datfile):
 def parseOUT(filename):
 
     files = []
+    optima = []
     times = []
     loops = []
     updates = []
@@ -61,16 +62,17 @@ def parseOUT(filename):
     with open(filename, 'r') as f:
         line = f.readline()
         while len(line) > 0:
-            filename, _, tStr, loopStr, uStr = line.split()
+            filename, oStr, tStr, loopStr, uStr = line.split()
 
             files.append(filename)
+            optima.append(int(oStr))
             times.append(float(tStr))
             loops.append(int(loopStr))
             updates.append(int(uStr))
 
             line = f.readline()
 
-    return files, times, loops, updates
+    return files, optima, times, loops, updates
 
 
 """Returns the dT and A vectors from a LUT file as a tuple"""

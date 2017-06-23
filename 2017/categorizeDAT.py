@@ -1,7 +1,5 @@
 #!/usr/bin/python
 
-from optimizeLUT import parseLUT, sendEmail, plotLUT, plotPsize, tryLUT
-import matplotlib.pyplot as plt
 import sys
 import numpy as np
 from utilities import parseDAT, parseCNF

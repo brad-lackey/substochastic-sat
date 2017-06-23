@@ -35,7 +35,7 @@ if __name__ == "__main__":
 
     sendEmail("Histogram analysis done.")
 
-    _, times, loops, updates = parseOUT(tag + ".out")
+    _, _, times, loops, updates = parseOUT(tag + ".out")
 
     plt.figure(0)
     plt.hist(times, 100)

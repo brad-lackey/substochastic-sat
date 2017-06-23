@@ -54,7 +54,7 @@ if __name__ == "__main__":
 
     outfile = tag + ".out"
 
-    files, _times, _loops, updates = parseOUT(outfile)
+    files, _optima, _times, _loops, updates = parseOUT(outfile)
 
     x = []
     y = []

@@ -95,7 +95,7 @@ def tryLUT(tag, filename, trials, dT, A, psize, weight=None, runtime=None, plote
         return UPDATE_PENALTY
 
     outfile = tag + ".out"
-    _, times, loops, updates = parseOUT(outfile)
+    _, _, times, loops, updates = parseOUT(outfile)
 
     global best_updates
     if best_updates is None:
@@ -231,7 +231,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                 if fval < 0:
                     fmin = fval
 
-                    _, _, _, best_updates = parseOUT(tag + ".out")
+                    _, _, _, _, best_updates = parseOUT(tag + ".out")
 
                     varmin = varvector.copy()
 
