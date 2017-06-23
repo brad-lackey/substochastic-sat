@@ -31,7 +31,8 @@ if __name__ == "__main__":
     ratios = []
 
     for cnf in files:
-        ratios.append(parseCNF(cnf))
+        var, clauses = parseCNF(cnf)
+        ratios.append(var/clauses)
 
 
     hist, edges = np.histogram(ratios, bins)

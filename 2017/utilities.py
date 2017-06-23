@@ -2,7 +2,7 @@
 import smtplib
 import numpy as np
 
-"""Returns the ratio of a given CNF file"""
+"""Returns the # of variables and clauses of a given CNF file"""
 def parseCNF(cnf):
     with open(cnf, 'r') as f:
         line = f.readline()
@@ -19,9 +19,7 @@ def parseCNF(cnf):
                 var = float(varStr)
                 clauses = float(cStr)
 
-                ratio = (var/clauses)
-
-                return ratio
+                return var, clauses
 
             line = f.readline()
 

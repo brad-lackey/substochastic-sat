@@ -1,8 +1,7 @@
 #!/usr/bin/python
 
 import sys
-import numpy as np
-from utilities import parseDAT, parseOUT, parseLUT
+from utilities import parseDAT, parseOUT, parseLUT, parseCNF
 from categorizeDAT import makeDAT
 from optimizeLUT import tryLUT
 
@@ -21,9 +20,25 @@ if __name__ == "__main__":
 
     opt_dict = {}
     t_dict = {}
-    for i, fname in enumerate(files):
-        opt_dict[fname] = optima[i]
-        t_dict[fname] = times[i]
+    i = 0
+
+    while i < len(files):
+        cnf = files[i]
+        variables, clauses = parseCNF(cnf)
+
+        if variables >= 500:
+            del files[i]
+            del optima[i]
+            del times[i]
+        else:
+            opt_dict[cnf] = optima[i]
+            t_dict[cnf] = times[i]
+            i += 1
+
+    datfile = tag + ".dat"
+
+    if len(files) > 0:
+        makeDAT(datfile, files, optima, times)
 
     bins, dT, A, psize = parseLUT(lutfile)
 
@@ -39,18 +54,18 @@ if __name__ == "__main__":
     easy_optima = []
     easy_times = []
 
-    for i, fname in enumerate(_files):
+    for i, cnf in enumerate(_files):
 
         # Filter files based on success or not
 
-        if opt_dict[fname] != _optima[i]:
-            hard_files.append(fname)
-            hard_optima.append(opt_dict[fname])
-            hard_times.append(t_dict[fname])
+        if opt_dict[cnf] != _optima[i]:
+            hard_files.append(cnf)
+            hard_optima.append(opt_dict[cnf])
+            hard_times.append(t_dict[cnf])
         else:
-            easy_files.append(fname)
-            easy_optima.append(opt_dict[fname])
-            easy_times.append(t_dict[fname])
+            easy_files.append(cnf)
+            easy_optima.append(opt_dict[cnf])
+            easy_times.append(t_dict[cnf])
 
     # Create respective DAT files
     if len(easy_files) > 0:
