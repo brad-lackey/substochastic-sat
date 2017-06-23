@@ -110,7 +110,12 @@ while( <IN> ){
         $updates{$a[0]} += $a[4];
     }
 
-    $factor{$a[0]} += (1+$a[1])/(1+$opt{$a[0]});
+    if ($a[1] == -1){
+        $factor{$a[0]} += 1000
+    }
+    else{
+        $factor{$a[0]} += (1+$a[1])/(1+$opt{$a[0]});
+    }
 
     # REMOVE
     # print "$a[0] Factor: $factor{$a[0]}\n";
