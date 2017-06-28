@@ -262,6 +262,30 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
   }
   
   fclose(fp);
+
+  int filelen = strlen(argv[2]);
+  char newFile[1000];
+  strcpy(newFile, argv[2]);
+
+  // check if file is wcnf
+  if(newFile[filelen-4] == 'w'){
+    // remove .wcnf ending
+    newFile[filelen-5] = 0;
+
+    printf("New CNF file: %s\n", newFile);
+
+    if ( (fp = fopen(newFile, "w")) == NULL ){
+      fprintf(stderr,"Could not open file %s, error: %s\n", newFile, strerror(errno));
+      return IO_ERROR;
+    }
+
+    removeSoftClauses(&sat);
+
+    printToCNF(fp,&sat);
+
+    fclose(fp);
+  }
+
   
   setBitLength(sat->num_vars);
   

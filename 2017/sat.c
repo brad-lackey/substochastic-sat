@@ -114,6 +114,26 @@ int parseHeader(char *line, int *nv, int *nc, potential_t *mw){
 }
 
 
+void removeSoftClauses(SAT * sat_ptr){
+  SAT sat = *sat_ptr;
+  int i, j;
+  int numc = sat->num_clauses;
+
+  for(i=0; i<sat->num_clauses; i++){
+    // if soft clause
+    if(sat->clause_weight[i] < numc){
+      for(j=i; j<numc-1; j++){
+        // remove j-th clause
+        sat->clause_weight[j] = sat->clause_weight[j+1];
+        sat->clause[j] = sat->clause[j+1];
+        sat->clause_length[j] = sat->clause_length[j+1];
+      }
+      sat->num_clauses--;
+      i--;
+    }
+  }
+}
+
 /**
  * This ((un)weighted/partial) SAT instance must be given in DIMACS-CNF format.
  * @param fp points to the file to be read.
@@ -351,6 +371,21 @@ void printSAT(FILE *fp, SAT sat){
     fprintf(fp,"0 \n");
   }
 }
+
+
+void printToCNF(FILE *fp, SAT * sat_ptr){
+  int i,j;
+  SAT sat = *sat_ptr;
+
+  fprintf(fp, "p wcnf %d %d\n", sat->num_vars, sat->num_clauses);
+  for (i=0; i<sat->num_clauses; ++i) {
+    for (j=0; j<sat->clause_length[i]; ++j)
+      fprintf(fp, "%d ", sat->clause[i][j]);
+    fprintf(fp,"0 \n");
+  }
+}
+
+
 
 /**
  * We need to return the potential as the sum of the weights of the failed clauses.
