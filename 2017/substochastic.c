@@ -284,6 +284,18 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
     printToCNF(fp,&sat);
 
     fclose(fp);
+
+    char command[1000];
+    strcpy(command, "SatELite_v1.0_linux");
+    strcat(command, " ");
+    strcat(command, newFile);
+    strcat(command, " ");
+    strcat(command, newFile);
+
+    if(system(command)){
+      fprintf(stderr, "Could not run SatELite on %s\n", newFile);
+    }
+    
   }
 
   
