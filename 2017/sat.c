@@ -114,25 +114,84 @@ int parseHeader(char *line, int *nv, int *nc, potential_t *mw){
 }
 
 
-void removeSoftClauses(SAT * sat_ptr){
+int removeSoftClauses(SAT * sat_ptr, SAT * removed){
   SAT sat = *sat_ptr;
+  SAT leftovers = NULL;
   int i, j;
   int numc = sat->num_clauses;
 
   for(i=0; i<sat->num_clauses; i++){
     // if soft clause
     if(sat->clause_weight[i] < numc){
+      potential_t tmp_cls_weight = sat->clause_weight[i];
+      int * tmp_cls = sat->clause[i];
+      int tmp_cls_len = sat->clause_length[i];
+
       for(j=i; j<numc-1; j++){
         // remove j-th clause
         sat->clause_weight[j] = sat->clause_weight[j+1];
         sat->clause[j] = sat->clause[j+1];
         sat->clause_length[j] = sat->clause_length[j+1];
       }
+
+      sat->clause_weight[sat->num_clauses - 1] = tmp_cls_weight;
+      sat->clause[sat->num_clauses - 1] = tmp_cls;
+      sat->clause_length[sat->num_clauses - 1] = tmp_cls_len;
+
       sat->num_clauses--;
       i--;
     }
   }
+
+  // Now create the SAT instance with the given number of variables and clauses.
+  if ( initSAT(&leftovers, sat->num_vars, numc-sat->num_clauses) ) {
+    *removed = NULL;
+    return MEMORY_ERROR;
+  }
+
+  for(i=0; i<leftovers->num_clauses; i++){
+    leftovers->clause_length[i] = sat->clause_length[numc - 1 - i];
+    leftovers->clause_weight[i] = sat->clause_weight[numc - 1 - i];
+    leftovers->clause[i] = sat->clause[numc - 1 - i];
+  }
+
+  *removed = leftovers;
+
+  return 0;
 }
+
+
+int recombineSAT(SAT * sat_one, SAT * sat_two, SAT * sum_ptr){
+  SAT sat1 = *sat_one;
+  SAT sat2 = *sat_two;
+  SAT result = NULL;
+
+  // Now create the SAT instance with the given number of variables and clauses.
+  if ( initSAT(&result, sat1->num_vars, sat1->num_clauses + sat2->num_clauses) ) {
+    *sum_ptr = NULL;
+    return MEMORY_ERROR;
+  }
+
+  int i;
+
+  for(i=0; i<sat1->num_clauses; i++){
+    result->clause_weight[i] = sat1->clause_weight[i];
+    result->clause_length[i] = sat1->clause_length[i];
+    result->clause[i] = sat1->clause[i];
+  }
+
+  for(i=sat1->num_clauses; i<result->num_clauses; i++){
+    result->clause_weight[i] = sat2->clause_weight[i-sat1->num_clauses];
+    result->clause_length[i] = sat2->clause_length[i-sat1->num_clauses];
+    result->clause[i] = sat2->clause[i-sat1->num_clauses];
+  }
+
+
+  *sum_ptr = result;
+
+  return 0;
+}
+
 
 /**
  * This ((un)weighted/partial) SAT instance must be given in DIMACS-CNF format.
@@ -377,7 +436,7 @@ void printToCNF(FILE *fp, SAT * sat_ptr){
   int i,j;
   SAT sat = *sat_ptr;
 
-  fprintf(fp, "p wcnf %d %d\n", sat->num_vars, sat->num_clauses);
+  fprintf(fp, "p cnf %d %d\n", sat->num_vars, sat->num_clauses);
   for (i=0; i<sat->num_clauses; ++i) {
     for (j=0; j<sat->clause_length[i]; ++j)
       fprintf(fp, "%d ", sat->clause[i][j]);

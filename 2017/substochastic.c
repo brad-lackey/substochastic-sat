@@ -279,12 +279,15 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
       return IO_ERROR;
     }
 
-    removeSoftClauses(&sat);
+    SAT leftovers;
+
+    removeSoftClauses(&sat, &leftovers);
 
     printToCNF(fp,&sat);
 
     fclose(fp);
 
+    // Run SatELite on new CNF file
     char command[1000];
     strcpy(command, "./SatELite_v1.0_linux");
     strcat(command, " --verbosity=0");
@@ -295,10 +298,30 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
 
     if(system(command)){
       fprintf(stderr, "Could not run SatELite on %s\n", newFile);
+      return 1;
     }
     else{
       printf("c Ran SatELite on %s\n", newFile);
     }
+
+    if ( (fp = fopen(newFile, "r")) == NULL ){
+      fprintf(stderr,"Could not open file %s, error: %s\n",newFile, strerror(errno));
+      return IO_ERROR;
+    }
+
+    SAT hardSAT;
+    if ( loadDIMACSFile(fp,&hardSAT) ){
+      fprintf(stderr,"Error reading in DIMACS SAT file %s\n",newFile);
+      return IO_ERROR;
+    }
+
+    fclose(fp);
+
+    if( recombineSAT(&hardSAT, &leftovers, &sat) ){
+      fprintf(stderr, "Could not combine SAT instances!\n");
+      return MEMORY_ERROR;
+    }
+
 
   }
 
