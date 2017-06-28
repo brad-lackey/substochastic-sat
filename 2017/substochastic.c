@@ -295,7 +295,10 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
     if(system(command)){
       fprintf(stderr, "Could not run SatELite on %s\n", newFile);
     }
-    
+    else{
+      printf("Ran SatELite on %s\n", newFile);
+    }
+
   }
 
   
