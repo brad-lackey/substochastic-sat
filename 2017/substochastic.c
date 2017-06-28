@@ -286,7 +286,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
     fclose(fp);
 
     char command[1000];
-    strcpy(command, "SatELite_v1.0_linux");
+    strcpy(command, "./SatELite_v1.0_linux");
     strcat(command, " ");
     strcat(command, newFile);
     strcat(command, " ");
@@ -296,7 +296,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
       fprintf(stderr, "Could not run SatELite on %s\n", newFile);
     }
     else{
-      printf("Ran SatELite on %s\n", newFile);
+      printf("c Ran SatELite on %s\n", newFile);
     }
 
   }
