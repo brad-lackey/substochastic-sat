@@ -272,7 +272,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
     // remove .wcnf ending
     newFile[filelen-5] = 0;
 
-    printf("New CNF file: %s\n", newFile);
+    printf("c New CNF file: %s\n", newFile);
 
     if ( (fp = fopen(newFile, "w")) == NULL ){
       fprintf(stderr,"Could not open file %s, error: %s\n", newFile, strerror(errno));
@@ -287,6 +287,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
 
     char command[1000];
     strcpy(command, "./SatELite_v1.0_linux");
+    strcat(command, " --verbosity=0");
     strcat(command, " ");
     strcat(command, newFile);
     strcat(command, " ");
