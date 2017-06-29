@@ -34,6 +34,7 @@ void printBits(FILE *fp, Bitstring bst) {
   int i;
   int val;
   
+  fprintf(fp,"s UNKNOWN\n");
   fprintf(fp,"v ");
   
   for(i = 0; i < nbts; i++) {

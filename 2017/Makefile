@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-O3 -funroll-loops -Wall
+CFLAGS=-g -O3 -funroll-loops -Wall
 LINK=-lm
 INC=
 LIB=
@@ -8,7 +8,7 @@ all : ssmc
 
 ssmc : substochastic.c bitstring.o sat.o population.o LUT.o
 	$(CC) $(CFLAGS) $(INC) substochastic.c bitstring.o sat.o population.o LUT.o $(LIB) $(LINK) -o ssmc
-	strip ssmc
+	
 
 greedy : greedy.c bitstring.o sat.o population.o
 	$(CC) $(CFLAGS) $(INC) greedy.c bitstring.o sat.o population.o $(LIB) $(LINK) -o greedy

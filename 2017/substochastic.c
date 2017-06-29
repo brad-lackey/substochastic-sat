@@ -4,6 +4,7 @@
  * Created by Brad Lackey on 3/14/16. Last modified 6/14/17.
  */
 
+#include <signal.h> // Needed for competition
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -34,15 +35,34 @@ static int popsize,runmode;
 static double weight, end_weight, runtime, runstep;
 static potential_t optimal;
 
-
-
-
 void update(double a, double b, double mean, Population P, int parity);
 int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut);
 int descend(Population P);
 void shuffleBits();
 
+
+
+// For catching sigterm
+volatile sig_atomic_t done = 0;
+
+void term(int signum)
+{
+	done = 1;
+}
+
+void printSolution(long min, Bitstring solution){
+      printf("o %ld\n", min);
+      printBits(stdout, solution);
+      fflush(stdout);
+}
+
 int main(int argc, char **argv){
+  // Must catch sigterm in code
+  struct sigaction action;
+  memset(&action, 0, sizeof(struct sigaction));
+  action.sa_handler = term;
+  sigaction(SIGTERM, &action, NULL);
+
   int parity, try, err, updates;
   double mean;
   double a, b, t, dt;
@@ -57,7 +77,6 @@ int main(int argc, char **argv){
   int i;
   word_t u;
 #endif
-  
   
   beg = clock();
   
@@ -98,30 +117,21 @@ int main(int argc, char **argv){
   updates = 0;
   parity = 0;
   
-  while (1) {
-//    randomPopulation(pop,popsize);
+  while (!done) {
     local_min = min;
-    
-    // Here's the hook for changing which bits the walkers use
-    lenW = nbts; shuffleBits();
+    lenW = nbts; shuffleBits(); // Here's the hook for changing which bits the walkers use
 
     int time_index;
     for(time_index=0; time_index < lut->nrows; time_index++) {
       a = lut->vals[time_index];
       b = 1 - a;
       a *= weight;
-
-// Can readjust population size according to schedule here.
-      popsize = lut->psizes[time_index];
-      reallocatePopulation(pop, popsize, parity);
       
-//      printf("%u: %lf, %lf\n", time_index, lut->times[time_index], lut->vals[time_index]);
+      popsize = lut->psizes[time_index]; 
+      reallocatePopulation(pop, popsize, parity);
 
       t = 0;
-      while (t < runtime*(lut->times[time_index])) {
-//      printf("population now is (%d,%d)\n",pop->psize,popsize); 
-//      a = weight*(1.0 - t/runtime); // Turned weight into percent -- Michael 3/30/16
-//      b = (t/runtime);
+      while (t < runtime*(lut->times[time_index]) && !done) {
 
         mean = pop->avg_v + (pop->max_v - pop->min_v) * (popsize - pop->psize) / (2.0 * popsize);
 
@@ -129,65 +139,31 @@ int main(int argc, char **argv){
           dt = 0.9 / (a + b * (pop->max_v - mean));
         else
           dt = 0.9 / (a + b * (mean - pop->min_v));
-//        if (t + dt > runtime)
-//          dt = runtime - t;
 
         update(a*dt, b*dt, mean, pop, parity);
         updates += pop->psize;
 
         end = clock();
         time_spent = (double) (end - beg) / CLOCKS_PER_SEC;
-        if(time_spent > 60) return 1;
 
         if (pop->winner->potential < local_min) {
-          local_min = pop->winner->potential;
-          if (local_min < topweight) {
-            printf("o %ld\n", local_min);
-            printf("c Walltime: %f seconds, %d loop(s), %d update(s)\n", time_spent, try, updates);
-            fflush(stdout);
+          	local_min = pop->winner->potential;
           }
           if (local_min <= optimal) {
             break;
           }
-        }
-//        if (time_spent > 30)
-//          break;
-
         t += dt;
         parity ^= 1;
       }
     }
     
-    if ( local_min < min ) {
+    if ( local_min < min) {
       min = local_min;
       copyBitstring(solution, pop->winner);
-      if ( min < topweight ) {
-        printBits(stdout, solution);
-        fflush(stdout);
-      }
-      if (min <= optimal) {
-        //sleep(1);
-        return 0;
-      }
+      printf("c\nc New solution found.\nc\n");
+      printSolution(min, solution);
     }
     
-    if ( time_spent > 120 ){
-      return 1;
-    }
-    
-/*    if ( time_spent > 120 ){
-      
-      weight = pop->sat->total_weight/150000.0;
-      runtime = 8000000.0;
-      
-    } else {
-      
-      weight = 0.95*weight + 0.05*end_weight;
-      runtime += runstep;
-      
-    }*/
-    
-
 #if TRACK_GLOBAL_BIASES
     
     for (i=0; i<pop->sat->num_vars; ++i) {
@@ -200,17 +176,24 @@ int main(int argc, char **argv){
     
     ++try;
     randomPopulation(pop,popsize);
+
 #if GREEDY_DESCENT
     if ( (err = descend(pop)) ){
       return err;
     }
 #endif
-
   }
-  
+
+  if (done) {
+	printf("c\nc Best solution found...\nc\n");
+	printSolution(min,solution);
+        printf("c done.\n");
+  }
+
   freeBitstring(&solution);
 
   return 0;
+  
 }
 
 
@@ -221,8 +204,8 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
   Population pop;
   
   if ( argc < 3 || argc > 5 ) {
-    fprintf(stderr, "Usage: %s <LUT.txt> <instance.cnf> \n",argv[0]);
-    fprintf(stderr, "Usage: %s <LUT.txt> <instance.cnf> [<target optimum> [<seed>]]\n",argv[0]);
+    //fprintf(stderr, "Usage: %s <LUT.lut> <instance.cnf> \n",argv[0]);
+    fprintf(stderr, "Usage: %s <LUT.lut> <instance.cnf> [<target optimum> [<seed>]]\n",argv[0]);
     return 2;
   }
   
