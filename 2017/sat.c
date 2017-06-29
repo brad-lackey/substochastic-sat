@@ -95,10 +95,28 @@ int loadSATMAP(FILE * fp, SATMAP *map_ptr){
     }
 
     map->indices = j;
-    
+
     *map_ptr = map;
 
     return 0;
+}
+
+
+void mapSAT(SAT *sat_ptr, SATMAP *map_ptr){
+    SAT sat = *sat_ptr;
+    SATMAP map = *map_ptr;
+    int i, j;
+
+    sat->num_vars = map->num_vars;
+
+    for(i=0; i<sat->num_clauses; i++){
+        for(j=0; j<sat->clause_length[i]; j++){
+            if(sat->clause[i][j] > map->indices)
+                continue;
+
+            sat->clause[i][j] = map->clause_map[sat->clause[i][j]-1];
+        }
+    }
 }
 
 

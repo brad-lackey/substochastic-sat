@@ -60,6 +60,7 @@ void freeSAT(SAT *sat_ptr);                     ///< Deallocation routine for a 
 void printSAT(FILE *fp, SAT sat);               ///< Print in DIMACS format.
 void printToCNF(FILE *fp, SAT * sat_ptr);               ///< Print in DIMACS format.
 int recombineSAT(SAT * sat_one, SAT * sat_two, SAT * sum_ptr); ///< Combine SAT instances into a single instance.
+void mapSAT(SAT *sat_ptr, SATMAP *map_ptr);
 
 
 potential_t getPotential(Bitstring bts, SAT sat);       ///< Evaluates the SAT instance on the passed bitstring.
