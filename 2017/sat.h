@@ -42,7 +42,17 @@ struct sat_st {
 #endif
 };
 
+struct map;
+typedef struct map * SATMAP;
+
+struct map {
+  int num_vars;
+  int * clause_map;
+  int indices;
+};
+
 // Constuctors and I/O routines. Potentials are expected to be loaded from files.
+int loadSATMAP(FILE * fp, SATMAP *map_ptr);     ///< Creates a SAT map from file.
 int initSAT(SAT *sat_ptr, int nvars, int ncls); ///< Initialize memory for a sat instance.
 int loadDIMACSFile(FILE *fp, SAT *sat_ptr);     ///< Create a SAT instance from a file.
 int removeSoftClauses(SAT *sat_ptr, SAT *removed);     ///< Removes Soft Clauses from a SAT instance, placing them in removed.

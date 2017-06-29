@@ -274,34 +274,46 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
 
     printf("c New CNF file: %s\n", newFile);
 
-    if ( (fp = fopen(newFile, "w")) == NULL ){
-      fprintf(stderr,"Could not open file %s, error: %s\n", newFile, strerror(errno));
-      return IO_ERROR;
-    }
+//    if ( (fp = fopen(newFile, "w")) == NULL ){
+//      fprintf(stderr,"Could not open file %s, error: %s\n", newFile, strerror(errno));
+//      return IO_ERROR;
+//    }
 
     SAT leftovers;
 
     removeSoftClauses(&sat, &leftovers);
 
-    printToCNF(fp,&sat);
+//    printToCNF(fp,&sat);
+//
+//    fclose(fp);
+//
+//    // Run SatELite on new CNF file
+//    char command[1000];
+//    strcpy(command, "./SatELite_v1.0_linux");
+//    strcat(command, " --verbosity=0");
+//    strcat(command, " ");
+//    strcat(command, newFile);
+//    strcat(command, " ");
+//    strcat(command, newFile);
+//    strcat(command, " var.map");
+//
+//    if(system(command)){
+//      fprintf(stderr, "Could not run SatELite on %s\n", newFile);
+//      return 1;
+//    }
+//    else{
+//      printf("c Ran SatELite on %s\n", newFile);
+//    }
 
-    fclose(fp);
-
-    // Run SatELite on new CNF file
-    char command[1000];
-    strcpy(command, "./SatELite_v1.0_linux");
-    strcat(command, " --verbosity=0");
-    strcat(command, " ");
-    strcat(command, newFile);
-    strcat(command, " ");
-    strcat(command, newFile);
-
-    if(system(command)){
-      fprintf(stderr, "Could not run SatELite on %s\n", newFile);
-      return 1;
+    if ( (fp = fopen("../out.map", "r")) == NULL ){
+        fprintf(stderr,"Could not open file %s, error: %s\n",newFile, strerror(errno));
+        return IO_ERROR;
     }
-    else{
-      printf("c Ran SatELite on %s\n", newFile);
+
+    SATMAP map;
+
+    if ( loadSATMAP(fp, &map) ){
+        fprintf(stderr, "Could not load map %s, error: %s\n", "../out.map", strerror(errno));
     }
 
     if ( (fp = fopen(newFile, "r")) == NULL ){

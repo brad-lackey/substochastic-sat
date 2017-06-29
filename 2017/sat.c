@@ -57,6 +57,51 @@ int initSAT(SAT *sat_ptr, int nvars, int ncls){
 }
 
 
+
+int loadSATMAP(FILE * fp, SATMAP *map_ptr){
+    SATMAP map;
+    char *line = NULL;
+    size_t linecap = 0;
+    ssize_t linelen;
+    int i, j, k, off;
+
+    if( (map = (SATMAP) malloc(sizeof(struct map))) == NULL){
+        *map_ptr = NULL;
+        return MEMORY_ERROR;
+    }
+
+    if ((linelen = getline(&line, &linecap, fp)) <= 0){
+        *map_ptr = NULL;
+        return IO_ERROR;
+    }
+
+    sscanf(line, "%d 0", &map->num_vars);
+
+    map->clause_map = (int *) malloc(map->num_vars*sizeof(int));
+
+    j=0;
+    while((linelen = getline(&line, &linecap, fp)) > 0){
+        off = 0;
+        for(i=0; i<map->num_vars; i++) {
+            int d;
+            sscanf(line + off, "%d%n", &d, &k);
+            off += k;
+            if(d == 0 || *(line+off) == 0)
+                break;
+            else
+                map->clause_map[j] = d;
+            j++;
+        }
+    }
+
+    map->indices = j;
+    
+    *map_ptr = map;
+
+    return 0;
+}
+
+
 // Comparison routine for quicksort.
 int abscompare(const int *a, const int *b){
   int i = *a;
