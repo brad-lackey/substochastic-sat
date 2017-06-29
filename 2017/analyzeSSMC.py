@@ -7,9 +7,7 @@ def parseSSMC(output):
     varmap = {}
     for line in output.split('\n'):
         if line.startswith("v"):
-            for v in line.split():
-                varmap[v] = not v.startswith('-')
-
+            varmap = line.split();
     return varmap
 
 
@@ -27,15 +25,12 @@ def parseCNF(cnf, varmap):
 
             wStr = vars[0]
 
-            if len(vars) > 3:
-                pass
-
             for var in vars[1:-1]:
-                if(var not in varmap):
-                    if var == vars[-2]:
-                        sum += int(wStr)
-                else:
+                if var in varmap:
                     break
+                if var == vars[-2]:
+                    sum += int(wStr)
+
 
             line = f.readline()
 
@@ -45,6 +40,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) != 4:
         print("Usage: ./analyzeSSMC.py <lut> <instance.cnf> optimum")
+        sys.exit(1)
 
     lut = sys.argv[1]
     wcnf = sys.argv[2]
