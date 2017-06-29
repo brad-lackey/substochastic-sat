@@ -114,7 +114,7 @@ void mapSAT(SAT *sat_ptr, SATMAP *map_ptr){
             if(sat->clause[i][j] > map->indices)
                 continue;
 
-            sat->clause[i][j] = map->clause_map[sat->clause[i][j]-1];
+            sat->clause[i][j] = map->clause_map[abs(sat->clause[i][j])-1];
         }
     }
 }
