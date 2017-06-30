@@ -315,6 +315,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
 
     mapSAT(&hardSAT, &map);
 
+    freeSAT(&sat);
     if( recombineSAT(&hardSAT, &leftovers, &sat) ){
       fprintf(stderr, "Could not combine SAT instances!\n");
       return MEMORY_ERROR;
