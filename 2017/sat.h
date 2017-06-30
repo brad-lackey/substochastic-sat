@@ -48,7 +48,9 @@ typedef struct map * SATMAP;
 struct map {
   int num_vars;
   int * clause_map;
-  int indices;
+  int * unit_clause;
+  int unit_clauses;
+  int map_indices;
 };
 
 // Constuctors and I/O routines. Potentials are expected to be loaded from files.

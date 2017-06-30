@@ -78,9 +78,26 @@ int loadSATMAP(FILE * fp, SATMAP *map_ptr){
     sscanf(line, "%d 0", &map->num_vars);
 
     map->clause_map = (int *) malloc(map->num_vars*sizeof(int));
+    map->unit_clause = (int *) malloc(map->num_vars*sizeof(int));
+
+
+    if( (linelen = getline(&line, &linecap, fp)) > 0){
+        off = 0;
+        for(i =0; i<map->num_vars; i++){
+          int d;
+          sscanf(line + off, "%d%n", &d, &k);
+          off += k;
+          if(d == 0 || *(line+off) == 0)
+            break;
+          else
+            map->unit_clause[i] = d;
+        }
+    }
+
+    map->unit_clauses = i+1;
 
     j=0;
-    while((linelen = getline(&line, &linecap, fp)) > 0){
+    if( (linelen = getline(&line, &linecap, fp)) > 0){
         off = 0;
         for(i=0; i<map->num_vars; i++) {
             int d;
@@ -94,7 +111,7 @@ int loadSATMAP(FILE * fp, SATMAP *map_ptr){
         }
     }
 
-    map->indices = j;
+    map->map_indices = j;
 
     *map_ptr = map;
 
@@ -111,12 +128,38 @@ void mapSAT(SAT *sat_ptr, SATMAP *map_ptr){
 
     for(i=0; i<sat->num_clauses; i++){
         for(j=0; j<sat->clause_length[i]; j++){
-            if(sat->clause[i][j] > map->indices)
+            if(sat->clause[i][j] > map->map_indices)
                 continue;
 
             sat->clause[i][j] = map->clause_map[abs(sat->clause[i][j])-1];
         }
     }
+
+    SAT newSAT;
+
+    initSAT(&newSAT, sat->num_vars, sat->num_clauses + map->unit_clauses);
+
+    for(i=0; i<sat->num_clauses; i++){
+        newSAT->clause_length[i] = sat->clause_length[i];
+        newSAT->clause_weight[i] = newSAT->num_clauses;
+        newSAT->clause[i] = (int *) malloc(sat->clause_length[i]* sizeof(int));
+
+        for(j=0; j<sat->clause_length[i]; j++){
+          newSAT->clause[i][j] = sat->clause[i][j];
+        }
+    }
+
+    for(i=sat->num_clauses; i<newSAT->num_clauses; i++){
+      newSAT->clause_length[i] = 1;
+      newSAT->clause_weight[i] = newSAT->num_clauses;
+      newSAT->clause[i] = (int *) malloc(sizeof(int));
+      newSAT->clause[i][0] = map->unit_clause[i-sat->num_clauses - 1];
+    }
+
+    freeSAT(&sat);
+
+    *sat_ptr = newSAT;
+
 }
 
 
@@ -182,6 +225,7 @@ int removeSoftClauses(SAT * sat_ptr, SAT * removed){
   SAT leftovers = NULL;
   int i, j;
   int numc = sat->num_clauses;
+  int k=0;
 
   for(i=0; i<sat->num_clauses; i++){
     // if soft clause
@@ -189,8 +233,7 @@ int removeSoftClauses(SAT * sat_ptr, SAT * removed){
       potential_t tmp_cls_weight = sat->clause_weight[i];
       int * tmp_cls = sat->clause[i];
       int tmp_cls_len = sat->clause_length[i];
-
-      for(j=i; j<numc-1; j++){
+      for(j=i; j<numc-1-k; j++){
         // remove j-th clause
         sat->clause_weight[j] = sat->clause_weight[j+1];
         sat->clause[j] = sat->clause[j+1];
@@ -201,6 +244,7 @@ int removeSoftClauses(SAT * sat_ptr, SAT * removed){
       sat->clause[sat->num_clauses - 1] = tmp_cls;
       sat->clause_length[sat->num_clauses - 1] = tmp_cls_len;
 
+      k++;
       sat->num_clauses--;
       i--;
     }
@@ -238,13 +282,21 @@ int recombineSAT(SAT * sat_one, SAT * sat_two, SAT * sum_ptr){
   int i;
 
   for(i=0; i<sat1->num_clauses; i++){
-    result->clause_weight[i] = sat1->clause_weight[i];
+    if (sat1->clause_weight[i] > 1){
+      result->clause_weight[i] = result->num_clauses;
+    }
+    else
+      result->clause_weight[i] = sat1->clause_weight[i];
     result->clause_length[i] = sat1->clause_length[i];
     result->clause[i] = sat1->clause[i];
   }
 
   for(i=sat1->num_clauses; i<result->num_clauses; i++){
-    result->clause_weight[i] = sat2->clause_weight[i-sat1->num_clauses];
+    if (sat2->clause_weight[i-sat1->num_clauses] > 1){
+      result->clause_weight[i] = result->num_clauses;
+    }
+    else
+      result->clause_weight[i] = sat2->clause_weight[i-sat1->num_clauses];
     result->clause_length[i] = sat2->clause_length[i-sat1->num_clauses];
     result->clause[i] = sat2->clause[i-sat1->num_clauses];
   }
