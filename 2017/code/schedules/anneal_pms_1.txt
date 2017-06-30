@@ -1,0 +1,18 @@
+./pms_crafted/fault-diagnosis/s38584_nan_explicit_0_0.wcnf 1/1(100%) (1/1(100%)) -1.000s loops=0.0 updates=0.000 factor=0.000
+./pms_crafted/fault-diagnosis/s38584_nan_explicit_10_0.wcnf 1/1(100%) (1/1(100%)) -1.000s loops=0.0 updates=0.000 factor=0.000
+./pms_crafted/fault-diagnosis/s38584_nan_explicit_1_0.wcnf 1/1(100%) (1/1(100%)) -1.000s loops=0.0 updates=0.000 factor=0.000
+./pms_crafted/fault-diagnosis/s38584_nan_explicit_20_0.wcnf 1/1(100%) (1/1(100%)) -1.000s loops=0.0 updates=0.000 factor=0.000
+./pms_crafted/fault-diagnosis/s38584_nan_explicit_2_0.wcnf 1/1(100%) (1/1(100%)) -1.000s loops=0.0 updates=0.000 factor=0.000
+./pms_crafted/fault-diagnosis/s38584_nan_explicit_3_0.wcnf 1/1(100%) (1/1(100%)) -1.000s loops=0.0 updates=0.000 factor=0.000
+./pms_crafted/job-shop/ft10-808-1090.wcnf 1/1(100%) (1/1(100%)) -1.000s loops=0.0 updates=0.000 factor=0.000
+./pms_crafted/job-shop/la04-567-0696.wcnf 1/1(100%) (1/1(100%)) -1.000s loops=0.0 updates=0.000 factor=0.000
+./pms_crafted/job-shop/orb08-894-1058.wcnf 1/1(100%) (1/1(100%)) -1.000s loops=0.0 updates=0.000 factor=0.000
+./pms_crafted/maxclicque/random/max_clq_150-21-9834-1.clq.wcnf 1/1(100%) (0/1(0%)) 4.510s loops=33.0 updates=76115164.000 factor=1.000
+./pms_crafted/maxclicque/random/max_clq_150-21-9834-2.clq.wcnf 1/1(100%) (0/1(0%)) 0.908s loops=6.0 updates=14488606.000 factor=1.000
+./pms_crafted/maxclicque/random/max_clq_150-21-9834-3.clq.wcnf 1/1(100%) (0/1(0%)) 58.528s loops=444.0 updates=994971950.000 factor=1.000
+./pms_crafted/maxclicque/random/max_clq_150-21-9834-4.clq.wcnf 1/1(100%) (0/1(0%)) 8.539s loops=64.0 updates=144394327.000 factor=1.000
+./pms_crafted/maxclicque/structured/johnson8-4-4.clq.wcnf 1/1(100%) (1/1(100%)) 0.004s loops=0.0 updates=68443.000 factor=1.000
+./pms_crafted/maxclicque/structured/san200_0.9_1.clq.wcnf 0/1(0%) (0/1(0%)) 0.000s loops=0.0 updates=0.0 factor=1.107
+./pms_crafted/maxclicque/structured/san200_0.9_2.clq.wcnf 1/1(100%) (1/1(100%)) 0.286s loops=0.0 updates=4478627.000 factor=1.000
+./pms_crafted/maxclicque/structured/san200_0.9_3.clq.wcnf 1/1(100%) (0/1(0%)) 2.902s loops=3.0 updates=42075824.000 factor=1.000
+Overall: 16/17(94%) (11/17(69%)) 4.167s 34.375 loops 79787058.812 updates 8.107 factor

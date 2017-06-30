@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cd code/src
+make -B

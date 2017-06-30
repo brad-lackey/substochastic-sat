@@ -1,0 +1,2 @@
+./ms_random/abrame-habet/max2sat/120v/s2v120c1200-1.cnf 10000/10000(100%) (10000/10000(100%)) 0.039s loops=3.6 updates=26191.351
+Overall: 10000/10000(100%) (10000/10000(100%)) 0.039s 3.552 loops 26191.351 updates

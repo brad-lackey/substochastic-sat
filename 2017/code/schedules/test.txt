@@ -1,0 +1,2 @@
+./test.cnf 0/1(0%) (0/1(0%)) 0.000s loops=0.0 updates=0.0 factor=24.000
+Overall: 0/1(0%) (0/1(0%)) 0.000s 0.000 loops 0.000 updates 24.000 factor

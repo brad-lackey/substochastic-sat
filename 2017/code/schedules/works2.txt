@@ -1,0 +1,11 @@
+./ms_crafted/set-covering/scpclr/scpclr10_maxsat.cnf 0/1(0%) (0/1(0%)) 0.000s loops=0.0 updates=0.0
+./ms_crafted/set-covering/scpclr/scpclr11_maxsat.cnf 0/1(0%) (0/1(0%)) 0.000s loops=0.0 updates=0.0
+./ms_crafted/set-covering/scpclr/scpclr12_maxsat.cnf 0/1(0%) (0/1(0%)) 0.000s loops=0.0 updates=0.0
+./ms_crafted/set-covering/scpclr/scpclr13_maxsat.cnf 0/1(0%) (0/1(0%)) 0.000s loops=0.0 updates=0.0
+./ms_crafted/set-covering/scpcyc/scpcyc06_maxsat.cnf 1/1(100%) (0/1(0%)) 9.116s loops=5.0 updates=3978117.000
+./ms_crafted/set-covering/scpcyc/scpcyc07_maxsat.cnf 0/1(0%) (0/1(0%)) 0.000s loops=0.0 updates=0.0
+./ms_crafted/set-covering/scpcyc/scpcyc08_maxsat.cnf 0/1(0%) (0/1(0%)) 0.000s loops=0.0 updates=0.0
+./ms_crafted/set-covering/scpcyc/scpcyc09_maxsat.cnf 0/1(0%) (0/1(0%)) 0.000s loops=0.0 updates=0.0
+./ms_crafted/set-covering/scpcyc/scpcyc10_maxsat.cnf 0/1(0%) (0/1(0%)) 0.000s loops=0.0 updates=0.0
+./ms_crafted/set-covering/scpcyc/scpcyc11_maxsat.cnf 0/1(0%) (0/1(0%)) 0.000s loops=0.0 updates=0.0
+Overall: 1/10(10%) (0/10(0%)) 9.116s 5.000 loops 3978117.000 updates

@@ -1,0 +1,4 @@
+./ms_random/abrame-habet/max2sat/120v/s2v120c1200-1.cnf 1/1(100%) (1/1(100%)) 0.028s loops=2.0 updates=303638.000
+./ms_random/abrame-habet/max2sat/120v/s2v120c1200-2.cnf 1/1(100%) (1/1(100%)) 0.023s loops=1.0 updates=146629.000
+./ms_random/abrame-habet/max2sat/120v/s2v120c1200-3.cnf 1/1(100%) (1/1(100%)) 0.011s loops=0.0 updates=100289.000
+Overall: 3/3(100%) (3/3(100%)) 0.021s 1.000 loops 183518.667 updates 0.000 factor

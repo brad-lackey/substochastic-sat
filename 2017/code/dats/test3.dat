@@ -1,0 +1,8 @@
+./ms_crafted/set-covering/scpclr/scpclr10_maxsat.cnf   O = 25   T = 3.00
+./ms_crafted/set-covering/scpclr/scpclr11_maxsat.cnf   O = 23   T = 3.00
+./ms_crafted/set-covering/scpclr/scpclr12_maxsat.cnf   O = 23   T = 3.00
+./ms_crafted/set-covering/scpclr/scpclr13_maxsat.cnf   O = 23   T = 3.00
+./ms_crafted/set-covering/scpcyc/scpcyc06_maxsat.cnf   O = 60   T = 3.00
+./ms_crafted/set-covering/scpcyc/scpcyc07_maxsat.cnf   O = 144   T = 3.00
+./ms_crafted/set-covering/scpcyc/scpcyc08_maxsat.cnf   O = 342   T = 3.00
+./ms_crafted/set-covering/scpcyc/scpcyc09_maxsat.cnf   O = 772   T = 3.00

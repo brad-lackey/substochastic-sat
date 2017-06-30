@@ -1,0 +1,5 @@
+#!/bin/bash
+delay=3
+cpu=cpu=$(($STAREXEC_CPU_LIMIT-$delay-1))
+wl=$(($STAREXEC_WALLCLOCK_LIMIT-$delay-1))
+./runsolver -d $delay -C $cpu -W $wl -v out.v -w out.w ./ssmc $1

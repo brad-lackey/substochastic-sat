@@ -1,0 +1,15 @@
+./pms_crafted/maxclicque/structured/MANN_a27.clq.wcnf 0/1(0%) (0/1(0%)) 0.000s loops=0.0 updates=0.0 factor=1.012
+./pms_crafted/maxclicque/structured/MANN_a45.clq.wcnf 0/1(0%) (0/1(0%)) 0.000s loops=0.0 updates=0.0 factor=1.017
+./pms_crafted/maxclicque/structured/MANN_a81.clq.wcnf 1/1(100%) (1/1(100%)) -1.000s loops=0.0 updates=0.000 factor=0.000
+./pms_crafted/maxone/3sat/cnf3.150.300.195561.cnf.wcnf 1/1(100%) (0/1(0%)) 0.150s loops=0.0 updates=4433178.000 factor=1.000
+./pms_crafted/maxone/3sat/cnf3.150.300.195562.cnf.wcnf 1/1(100%) (0/1(0%)) 0.392s loops=0.0 updates=12648155.000 factor=1.000
+./pms_crafted/maxone/3sat/cnf3.150.300.195563.cnf.wcnf 1/1(100%) (0/1(0%)) 0.507s loops=0.0 updates=12997291.000 factor=1.000
+./pms_crafted/maxone/3sat/cnf3.150.300.195564.cnf.wcnf 1/1(100%) (0/1(0%)) 1.164s loops=0.0 updates=37707432.000 factor=1.000
+./pms_crafted/maxone/3sat/cnf3.150.300.195565.cnf.wcnf 1/1(100%) (0/1(0%)) 50.338s loops=1.0 updates=1645674344.000 factor=1.000
+./pms_crafted/maxone/3sat/cnf3.150.300.195566.cnf.wcnf 1/1(100%) (0/1(0%)) 0.496s loops=0.0 updates=15980689.000 factor=1.000
+./pms_crafted/maxone/3sat/cnf3.150.300.195567.cnf.wcnf 1/1(100%) (0/1(0%)) 24.014s loops=0.0 updates=742003323.000 factor=1.000
+./pms_crafted/maxone/3sat/cnf3.150.300.195568.cnf.wcnf 0/1(0%) (0/1(0%)) 0.000s loops=0.0 updates=0.0 factor=1.038
+./pms_crafted/maxone/3sat/cnf3.150.300.195569.cnf.wcnf 1/1(100%) (0/1(0%)) 24.709s loops=0.0 updates=715149697.000 factor=1.000
+./pms_crafted/maxone/3sat/cnf3.150.300.195570.cnf.wcnf 1/1(100%) (0/1(0%)) 0.723s loops=0.0 updates=21501070.000 factor=1.000
+./pms_crafted/maxone/structured/dp02s02.shuffled.cnf.wcnf 1/1(100%) (1/1(100%)) -1.000s loops=0.0 updates=0.000 factor=0.000
+Overall: 11/14(79%) (2/14(18%)) 9.136s 0.091 loops 291645016.273 updates 12.068 factor

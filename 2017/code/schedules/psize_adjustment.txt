@@ -1,0 +1,2 @@
+./ms_crafted/set-covering/scpclr/scpclr10_maxsat.cnf 10/10(100%) (1/10(10%)) 4.650s loops=201.9 updates=34277861.800
+Overall: 10/10(100%) (1/10(10%)) 4.650s 201.900 loops 34277861.800 updates 0.000 factor
