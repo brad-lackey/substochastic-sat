@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-g -O3 -funroll-loops -Wall
+CFLAGS=-g -O0 -funroll-loops -Wall
 LINK=-lm
 INC=
 LIB=

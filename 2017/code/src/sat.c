@@ -600,11 +600,13 @@ int createSATDerivative(DSAT *dsat_ptr, SAT sat){
   
   if ( (clen = (int *) calloc(sat->num_vars,sizeof(int))) == NULL ) {
     (*dsat_ptr) = NULL;
+    printf("am i here?\n");
     return MEMORY_ERROR;
   }
   if ( (dsat = (DSAT) malloc(sizeof(struct diff_sat_st))) == NULL) {
     free(clen);
     (*dsat_ptr) = NULL;
+    printf("or here?\n");
     return MEMORY_ERROR;
   }
   
@@ -613,6 +615,7 @@ int createSATDerivative(DSAT *dsat_ptr, SAT sat){
     free(clen);
     free(dsat);
     (*dsat_ptr) = NULL;
+    printf("maybe here?\n");
     return MEMORY_ERROR;
   }
   

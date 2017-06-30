@@ -92,8 +92,7 @@ int main(int argc, char **argv){
     fprintf(stderr, "Could not initialize answerspace.\n");
     return err;
   }
-  
-  
+ 
   randomPopulation(pop,popsize);
 #if GREEDY_DESCENT
   if ( (err = descend(pop)) ){
@@ -115,9 +114,10 @@ int main(int argc, char **argv){
   
   try = 0;
   updates = 0;
-  parity = 0;
   
   while (!done) {
+    parity = 0;
+    randomPopulation(pop,popsize);
     local_min = min;
     lenW = nbts; shuffleBits(); // Here's the hook for changing which bits the walkers use
 
@@ -133,11 +133,15 @@ int main(int argc, char **argv){
 	break;
       }
       reallocatePopulation(pop, popsize, parity);
+      //arraysize = 3*popsize;
       t = 0;
       while (t < runtime*(lut->times[time_index]) && !done) {
 
         mean = pop->avg_v + (pop->max_v - pop->min_v) * (popsize - pop->psize) / (2.0 * popsize);
-
+        if( pop->psize > 2*popsize) {
+		printf("c Population explosion\n");
+		break;
+	}
         if ((pop->max_v - mean) > (mean - pop->min_v))
           dt = 0.9 / (a + b * (pop->max_v - mean));
         else
@@ -145,7 +149,10 @@ int main(int argc, char **argv){
 
         update(a*dt, b*dt, mean, pop, parity);
         updates += pop->psize;
-
+        if (pop->psize <1) {
+            printf("c Population collapse\n");
+            break;
+        }
         end = clock();
         time_spent = (double) (end - beg) / CLOCKS_PER_SEC;
 
@@ -154,9 +161,7 @@ int main(int argc, char **argv){
 		if ( local_min < min) {
       			min = local_min;
 		        copyBitstring(solution, pop->winner);
-//		        printf("c\nc New solution found.\nc\n");
-//		        printSolution(min, solution);
-//                        printf("c Walltime: %f seconds, %d loops, %d updates\n", time_spent, try, updates);
+		        printSolution(min, solution);
 	        }
 
           if (local_min <= optimal) {
@@ -172,7 +177,6 @@ int main(int argc, char **argv){
     if ( local_min < min) {
       min = local_min;
       copyBitstring(solution, pop->winner);
-      printf("c\nc New solution found.\nc\n");
       printSolution(min, solution);
     }
     
@@ -214,7 +218,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
   int i, seed;
   FILE *fp;
   Population pop;
-  
+
   if ( argc < 3 || argc > 5 ) {
     //fprintf(stderr, "Usage: %s <LUT.lut> <instance.cnf> \n",argv[0]);
     fprintf(stderr, "Usage: %s <LUT.lut> <instance.cnf> [<target optimum> [<seed>]]\n",argv[0]);
@@ -260,16 +264,19 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
 
   size_t filelen = strlen(argv[2]);
   char newFile[1000];
-  strcpy(newFile, argv[2]);
+  char temp[1000];
+  strcpy(temp, argv[2]);
+  realpath(newFile, temp);
+
 
   // check if file is wcnf
   if(newFile[filelen-4] == 'w'){
     // remove .wcnf ending
-    newFile[filelen-5] = 0;
+    temp[filelen-5] = 0;
 
-    printf("c New CNF file: %s\n", newFile);
+    printf("c New CNF file: %s\n", temp);
 
-    if ( (fp = fopen(newFile, "w")) == NULL ){
+    if ( (fp = fopen(temp, "w")) == NULL ){
       fprintf(stderr,"Could not open file %s, error: %s\n", newFile, strerror(errno));
       return IO_ERROR;
     }
@@ -283,14 +290,27 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
 
     fclose(fp);
 
-    // Run SatELite on new CNF file
+    // Run eSatELite on new CNF file
     char command[1000];
-    strcpy(command, "../code/bin/SatELite_v1.0_linux");
+    realpath("/proc/self/exe", command);
+    int i=strlen(command)-1;
+    int j=0;
+    for(; command[i] != 0; i--){
+      if(command[i] == '/')
+        j++;
+      if(j == 2){
+        command[i] = 0;
+        break;
+      }
+    }
+    printf("c Path¨: %s\n", command);
+    strcat(command, "/code/bin/SatELite_v1.0_linux");
     strcat(command, " --verbosity=0");
     strcat(command, " ");
-    strcat(command, newFile);
+
+    strcat(command, temp);
     strcat(command, " ");
-    strcat(command, newFile);
+    strcat(command, temp);
     strcat(command, " var.map");
 
     if(system(command)){
@@ -336,11 +356,8 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
       fprintf(stderr,"Could not open file %s, error: %s\n", newFile, strerror(errno));
       return IO_ERROR;
     }
-
     printSAT(fp, sat);
-
     fclose(fp);
-
   }
 
   
@@ -497,7 +514,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
   //  printf("c Step weight: %.3f\n", weight);
   printf("c Target potential: %ld\n", optimal);
   printf("c Top potential: %ld\n", topweight);
-  arraysize = 3*popsize;
+  arraysize = 2000;
   
   srand48(seed);
   printf("c Seed: %i\n", seed);
@@ -527,6 +544,15 @@ void update(double a, double b, double mean, Population P, int parity){
     
     // First potential event: walker steps.
     if ( p < a ) {
+      if(P->walker[new+j] == NULL) {
+	printf("here\n");
+	P->walker[new+j] = P->walker[old+i];
+	printf("arraysize %d\n", arraysize);
+	printf("new index %d\n", new+j);
+        printf("j %d\n",j);
+	printf("new %d\n",j);
+	printf("popsize %d\n", P->psize);
+      }
       k = randomBitFlip(P->walker[new+j], P->walker[old+i]);
       if ( P->ds != NULL )
         e = P->walker[old+i]->potential + ((k>0)-(k<0))*getPotential(P->walker[new+j],P->ds->der[abs(k)-1]);
