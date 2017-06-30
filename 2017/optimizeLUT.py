@@ -46,7 +46,7 @@ def tryLUT(var, tag, filename, trials, dT, A, psize, weight=None, runtime=None, 
 
     args = []
     args.append('./testrun.pl')  # the program to run
-    args.append('./ssmc')
+    args.append('\"timeout -s 15 30 ./ssmc\"')
     args.append(lut)
     args.append(filename)
     args.append(str(trials))
