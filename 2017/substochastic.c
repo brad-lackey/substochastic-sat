@@ -128,8 +128,11 @@ int main(int argc, char **argv){
       a *= weight;
       
       popsize = lut->psizes[time_index]; 
+      if (pop->psize <1) {
+	printf("c Population collapse\n");
+	break;
+      }
       reallocatePopulation(pop, popsize, parity);
-
       t = 0;
       while (t < runtime*(lut->times[time_index]) && !done) {
 
@@ -147,11 +150,20 @@ int main(int argc, char **argv){
         time_spent = (double) (end - beg) / CLOCKS_PER_SEC;
 
         if (pop->winner->potential < local_min) {
-          	local_min = pop->winner->potential;
-          }
+		local_min = pop->winner->potential;
+		if ( local_min < min) {
+      			min = local_min;
+		        copyBitstring(solution, pop->winner);
+		        printf("c\nc New solution found.\nc\n");
+		        printSolution(min, solution);
+                        printf("c Walltime: %f seconds, %d loops, %d updates\n", time_spent, try, updates);
+	        }
+
           if (local_min <= optimal) {
             break;
           }
+        }
+
         t += dt;
         parity ^= 1;
       }
@@ -187,7 +199,7 @@ int main(int argc, char **argv){
   if (done) {
 	printf("c\nc Best solution found...\nc\n");
 	printSolution(min,solution);
-        printf("c done.\n");
+        printf("c Walltime: %f seconds, %d loops, %d updates\n", time_spent, try, updates);
   }
 
   freeBitstring(&solution);
