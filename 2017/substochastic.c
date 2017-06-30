@@ -154,9 +154,9 @@ int main(int argc, char **argv){
 		if ( local_min < min) {
       			min = local_min;
 		        copyBitstring(solution, pop->winner);
-		        printf("c\nc New solution found.\nc\n");
-		        printSolution(min, solution);
-                        printf("c Walltime: %f seconds, %d loops, %d updates\n", time_spent, try, updates);
+//		        printf("c\nc New solution found.\nc\n");
+//		        printSolution(min, solution);
+//                        printf("c Walltime: %f seconds, %d loops, %d updates\n", time_spent, try, updates);
 	        }
 
           if (local_min <= optimal) {
