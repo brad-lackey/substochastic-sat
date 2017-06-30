@@ -263,23 +263,20 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
   strcpy(newFile, argv[2]);
 
   // check if file is wcnf
-  if(problem_type == WEIGHTED_2_SAT || problem_type == WEIGHTED_3_SAT || problem_type == WEIGHTED_4_SAT
-     || problem_type == PARTIAL_2_SAT || problem_type == PARTIAL_3_SAT){
+  if(newFile[filelen-4] == 'w'){
     // remove .wcnf ending
     newFile[filelen-5] = 0;
 
     printf("c New CNF file: %s\n", newFile);
-
 //
 //    if ( (fp = fopen(newFile, "w")) == NULL ){
 //      fprintf(stderr,"Could not open file %s, error: %s\n", newFile, strerror(errno));
 //      return IO_ERROR;
 //    }
 
-    SAT softSAT;
-    SAT hardSAT;
+    SAT leftovers;
 
-    removeSoftClauses(&sat, &hardSAT, &softSAT);
+    removeSoftClauses(&sat, &leftovers);
 
 //    printToCNF(fp,&sat);
 //
@@ -320,6 +317,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
       return IO_ERROR;
     }
 
+    SAT hardSAT;
     if ( loadDIMACSFile(fp,&hardSAT) ){
       fprintf(stderr,"Error reading in DIMACS SAT file %s\n",newFile);
       return IO_ERROR;
@@ -329,7 +327,8 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
 
     mapSAT(&hardSAT, &map);
 
-    if( recombineSAT(&hardSAT, &softSAT, &sat) ){
+    freeSAT(&sat);
+    if( recombineSAT(&hardSAT, &leftovers, &sat) ){
       fprintf(stderr, "Could not combine SAT instances!\n");
       return MEMORY_ERROR;
     }
