@@ -156,7 +156,7 @@ int main(int argc, char **argv){
 		        copyBitstring(solution, pop->winner);
 		        printf("c\nc New solution found.\nc\n");
 		        printSolution(min, solution);
-                        printf("c Walltime: %f seconds, 0 loops, 0 updates\n", time_spent);
+                        printf("c Walltime: %f seconds, %d loops, %d updates\n", time_spent, try, updates);
 	        }
 
           if (local_min <= optimal) {
@@ -199,8 +199,7 @@ int main(int argc, char **argv){
   if (done) {
 	printf("c\nc Best solution found...\nc\n");
 	printSolution(min,solution);
-        printf("c done.\n");
-        printf("c Walltime: %f seconds, 0 loops, 0 updates\n", time_spent);
+        printf("c Walltime: %f seconds, %d loops, %d updates\n", time_spent, try, updates);
   }
 
   freeBitstring(&solution);
