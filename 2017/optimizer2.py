@@ -40,7 +40,7 @@ def main():
         xpmt = int(args[2])
 
         if xpmt < 0 or xpmt > 2:
-            print("Usage: ./optimizer2 dT|A|psize|both <experiment_type (0:fwd/bwd, 1:2 rnd, 2:2 no-cons rnd)> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
+            print("Usage: ./optimizer2 dT|A|psize|all <experiment_type (0:fwd/bwd, 1:2 rnd, 2:2 no-cons rnd)> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
             return 1
 
         lutfile = args[3]
@@ -55,7 +55,7 @@ def main():
             runtime = args[8]
 
     else:
-        print("Usage: ./optimizer2 dT|A|psize|both <experiment_type (0:fwd/bwd, 1:2 rnd, 2:2 no-cons rnd)> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
+        print("Usage: ./optimizer2 dT|A|psize|all <experiment_type (0:fwd/bwd, 1:2 rnd, 2:2 no-cons rnd)> [-v] [-m] [-p] <initialLUT> <filelist.dat> trials tag [\"step weight\" \"runtime\"]\n")
         return 1
 
     optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_level=0, email=email, verbose=verbose, plotenabled=plotenabled)
@@ -78,7 +78,7 @@ def tryLUT(tag, filename, trials, dT, A, psize, weight=None, runtime=None, plote
 
     args = []
     args.append('./testrun.pl')  # the program to run
-    args.append('./ssmc')
+    args.append('\"timeout -s 15 30 ./ssmc\"')
     args.append(lut)
     args.append(filename)
     args.append(str(trials))
@@ -161,7 +161,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
     else:
         indices = np.concatenate((np.arange(bins), np.arange(bins)))
 
-    if var != "both":
+    if var != "all":
 
         newLUT = False
 
@@ -281,7 +281,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                 break
 
     else:
-        fmin1 = fmin2 = fmin
+        fmin1 = fmin2 = fmin3 = fmin
 
         changedLUT = False
 
@@ -294,7 +294,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                                                recursion_level=recursion_level, email=email, verbose=verbose,
                                                plotenabled=plotenabled, start=start)
 
-            if fmin1 < fmin2 and fmin1 < fmin:
+            if fmin1 < fmin2 and fmin1 < fmin and fmin1 < fmin3:
                 makeLUT(lut, bins, new_dT, new_A, new_psize)
                 changedLUT = True
 
@@ -302,11 +302,19 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
                                                recursion_level=recursion_level, email=email, verbose=verbose,
                                                plotenabled=plotenabled, start=start)
 
-            if fmin2 < fmin1 and fmin2 < fmin:
+            if fmin2 < fmin1 and fmin2 < fmin and fmin2 < fmin3:
                 makeLUT(lut, bins, new_dT, new_A, new_psize)
                 changedLUT = True
 
-            if fmin1 > fmin and fmin2 > fmin:
+            fmin3, new_dT, new_A, new_psize = optimizeLUT('psize', lut, datfile, trials, tag, weight, runtime,
+                                                          recursion_level=recursion_level, email=email, verbose=verbose,
+                                                          plotenabled=plotenabled, start=start)
+
+            if fmin3 < fmin1 and fmin3 < fmin and fmin3 < fmin2:
+                makeLUT(lut, bins, new_dT, new_A, new_psize)
+                changedLUT = True
+
+            if fmin1 > fmin and fmin2 > fmin and fmin3 > fmin:
                 if changedLUT:
                     # if it cannot improve it past the fmin, save the best schedule and break the loop
                     if verbose:
@@ -321,7 +329,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
             else:
                 fmin = min([fmin1, fmin2])
 
-    if var == "both":
+    if var == "all":
         lut = tag + ".lut"
         fmin, dT, A = branchLUT(lut, tag, datfile, trials, weight, runtime, recursion_level, email, plotenabled, verbose, start)
     elif var == 'A':
@@ -341,7 +349,7 @@ def optimizeLUT(var, lutfile, datfile, trials, tag, weight, runtime, recursion_l
             else:
                 plotLUT(dT, A)
         if email:
-            if var == "both":
+            if var == "all":
                 msg = "Optimization finished after " + str(datetime.datetime.now() - start) + \
                       ", at " + datetime.datetime.now().strftime("%a %d/%m/%y %H:%M:%S") + \
                       "!\nOptimal dT: {0}\nOptimal A: {1}\nOptimum # updates: {2}\n".format(dT, A, fmin)
@@ -375,13 +383,13 @@ def getMinimizer(var):
         f = lambda x1, i, x2, a1, a2, a3, a4, psize, a5, a6, v, p: tryLUT(a1, a2, a3, a4, np.insert(x2, i, x1), psize, a5,
                                                                           a6, verbose=v,
                                                                           plotenabled=p)  # rearranging the arguments for A
-    elif var == 'both':
+    elif var == 'all':
         return None
     elif var == 'psize':
         f = lambda x1, i, x2, a1, a2, a3, a4, a5, a6, a7, v, p: tryLUT(a1, a2, a3, a4, a5, np.insert(x2, i, x1), a6, a7,
                                                                        verbose=v, plotenabled=p)
     else:
-        raise Exception("Invalid variable argument! Must be \"dT\", \"A\" or \"both\"")
+        raise Exception("Invalid variable argument! Must be \"dT\", \"A\" or \"all\"")
     return f
 
 
@@ -411,7 +419,7 @@ def branchLUT(lut, tag, datfile, trials, weight, runtime, recursion_level, email
         msg = "Recursing down to level {0}...".format(recursion_level+1)
         sendEmail(msg)
 
-    return optimizeLUT("both", lut, datfile, trials, tag, weight, runtime, recursion_level=recursion_level + 1,
+    return optimizeLUT("all", lut, datfile, trials, tag, weight, runtime, recursion_level=recursion_level + 1,
                        email=email, verbose=verbose, plotenabled=plotenabled, start=start)
 
 
