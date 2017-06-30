@@ -263,7 +263,8 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
   strcpy(newFile, argv[2]);
 
   // check if file is wcnf
-  if(newFile[filelen-4] == 'w'){
+  if(problem_type == WEIGHTED_2_SAT || problem_type == WEIGHTED_3_SAT || problem_type == WEIGHTED_4_SAT
+     || problem_type == PARTIAL_2_SAT || problem_type == PARTIAL_3_SAT){
     // remove .wcnf ending
     newFile[filelen-5] = 0;
 
