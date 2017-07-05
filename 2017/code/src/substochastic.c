@@ -155,6 +155,7 @@ int main(int argc, char **argv){
         }
         end = clock();
         time_spent = (double) (end - beg) / CLOCKS_PER_SEC;
+        if(time_spent > 5) exit(0);
 
         if (pop->winner->potential < local_min) {
 		local_min = pop->winner->potential;
@@ -266,11 +267,9 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
   char newFile[1000];
   char temp[1000];
   strcpy(temp, argv[2]);
-  realpath(newFile, temp);
-
-
+  realpath(temp, newFile);
   // check if file is wcnf
-  if(newFile[filelen-4] == 'w'){
+  if(1){
     // remove .wcnf ending
     temp[filelen-5] = 0;
 
@@ -282,9 +281,8 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
     }
 
     SAT softSAT;
-    SAT hardSAT;
 
-    removeSoftClauses(&sat, &hardSAT, &softSAT);
+    removeSoftClauses(&sat, &softSAT);
 
     printToCNF(fp,&sat);
 
@@ -303,15 +301,22 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
         break;
       }
     }
+    char mappath[1000];
+    strcpy(mappath,command);
+    strcat(mappath,"/var.map");
+
     printf("c Path¨: %s\n", command);
     strcat(command, "/code/bin/SatELite_v1.0_linux");
-    strcat(command, " --verbosity=0");
+    strcat(command, " --verbosity=0 +pre -ve +all");
     strcat(command, " ");
 
-    strcat(command, temp);
+    strcat(command, newFile);
     strcat(command, " ");
-    strcat(command, temp);
-    strcat(command, " var.map");
+    strcat(command, newFile);
+    strcat(command, ".pre ");
+    strcat(command, mappath);
+
+    strcat(newFile, ".pre");
 
     if(system(command)){
       fprintf(stderr, "Could not run SatELite on %s\n", newFile);
@@ -321,15 +326,16 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
       printf("c Ran SatELite on %s\n", newFile);
     }
 
-    if ( (fp = fopen("var.map", "r")) == NULL ){
-        fprintf(stderr,"Could not open file %s, error: %s\n","var.map", strerror(errno));
+
+    if ( (fp = fopen(mappath, "r")) == NULL ){
+        fprintf(stderr,"Could not open file %s, error: %s\n",mappath, strerror(errno));
         return IO_ERROR;
     }
 
     SATMAP map;
 
     if ( loadSATMAP(fp, &map) ){
-        fprintf(stderr, "Could not load map %s, error: %s\n", "var.map", strerror(errno));
+        fprintf(stderr, "Could not load map %s, error: %s\n", mappath, strerror(errno));
     }
 
 
@@ -338,6 +344,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
       return IO_ERROR;
     }
 
+    SAT hardSAT;
     if ( loadDIMACSFile(fp,&hardSAT) ){
       fprintf(stderr,"Error reading in DIMACS SAT file %s\n",newFile);
       return IO_ERROR;
@@ -347,6 +354,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
 
     mapSAT(&hardSAT, &map);
 
+    freeSAT(&sat);
     if( recombineSAT(&hardSAT, &softSAT, &sat) ){
       fprintf(stderr, "Could not combine SAT instances!\n");
       return MEMORY_ERROR;
@@ -374,7 +382,7 @@ int parseCommand(int argc, char **argv, Population *Pptr, LUT *lut) {
     runstep = 2*runtime;
 //    popsize = 16;
     popsize = 1024;
-    if ( NUM_VARIABLE_WORDS*vlen*tlen*sizeof(word_t) + NUM_CLAUSE_WORDS*clen*sizeof(int) < (1<<30) )
+    if ( NUM_VARIABLE_WORDS*vlen*tlen*sizeof(word_t) + NUM_CLAUSE_WORDS*clen*sizeof(int) < (1<<30) 
       runmode = 2;
     else
       runmode = 1;

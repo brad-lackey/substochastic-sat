@@ -51,7 +51,7 @@ int initSAT(SAT *sat_ptr, int nvars, int ncls){
     return MEMORY_ERROR;
   }
 #endif
-
+  
   (*sat_ptr) = sat;
   return 0;
 }
@@ -220,44 +220,49 @@ int parseHeader(char *line, int *nv, int *nc, potential_t *mw){
 }
 
 
-int removeSoftClauses(SAT * sat_ptr, SAT * hard_ptr, SAT * soft_ptr){
+int removeSoftClauses(SAT * sat_ptr, SAT * removed){
   SAT sat = *sat_ptr;
-  SAT hard = NULL;
-  SAT soft = NULL;
-  int i;
-
-  // Now create the SAT instance with the given number of variables and clauses.
-  if ( initSAT(&soft, sat->num_vars, sat->num_clauses) ) {
-    *soft_ptr = NULL;
-    return MEMORY_ERROR;
-  }
-
-  // Now create the SAT instance with the given number of variables and clauses.
-  if ( initSAT(&hard, sat->num_vars, sat->num_clauses) ) {
-    *hard_ptr = NULL;
-    return MEMORY_ERROR;
-  }
-
-  soft->num_clauses = hard->num_clauses = 0;
+  SAT leftovers = NULL;
+  int i, j;
+  int numc = sat->num_clauses;
+  int k=0;
 
   for(i=0; i<sat->num_clauses; i++){
     // if soft clause
-    if(sat->clause_weight[i] < topweight){
-      soft->clause_weight[soft->num_clauses] = sat->clause_weight[i];
-      soft->clause_length[soft->num_clauses] = sat->clause_length[i];
-      soft->clause[soft->num_clauses] = sat->clause[i];
-      soft->num_clauses++;
-    }
-    else{
-      hard->clause_weight[hard->num_clauses] = sat->clause_weight[i];
-      hard->clause_length[hard->num_clauses] = sat->clause_length[i];
-      hard->clause[hard->num_clauses] = sat->clause[i];
-      hard->num_clauses++;
+    if(sat->clause_weight[i] < numc){
+      potential_t tmp_cls_weight = sat->clause_weight[i];
+      int * tmp_cls = sat->clause[i];
+      int tmp_cls_len = sat->clause_length[i];
+      for(j=i; j<numc-1-k; j++){
+        // remove j-th clause
+        sat->clause_weight[j] = sat->clause_weight[j+1];
+        sat->clause[j] = sat->clause[j+1];
+        sat->clause_length[j] = sat->clause_length[j+1];
+      }
+
+      sat->clause_weight[sat->num_clauses - 1] = tmp_cls_weight;
+      sat->clause[sat->num_clauses - 1] = tmp_cls;
+      sat->clause_length[sat->num_clauses - 1] = tmp_cls_len;
+
+      k++;
+      sat->num_clauses--;
+      i--;
     }
   }
 
-  *soft_ptr = soft;
-  *hard_ptr = hard;
+  // Now create the SAT instance with the given number of variables and clauses.
+  if ( initSAT(&leftovers, sat->num_vars, numc-sat->num_clauses) ) {
+    *removed = NULL;
+    return MEMORY_ERROR;
+  }
+
+  for(i=0; i<leftovers->num_clauses; i++){
+    leftovers->clause_length[i] = sat->clause_length[numc - 1 - i];
+    leftovers->clause_weight[i] = sat->clause_weight[numc - 1 - i];
+    leftovers->clause[i] = sat->clause[numc - 1 - i];
+  }
+
+  *removed = leftovers;
 
   return 0;
 }
@@ -439,6 +444,7 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
 #endif
   
   // Point to our newly minted instance and free the buffer memory.
+  sat->total_weight = weight_sum;
   *sat_ptr = sat;
   free(buf);
   
@@ -448,6 +454,7 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
   avg_cls_length /= ncls;
   
   if ( type == 0 ) { // This is an unweighted max-sat problem.
+    
     topweight = weight_sum;
     
     if ( avg_cls_length < 4.01)
@@ -464,8 +471,7 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
   if ( type == 1 ) { // This is a partial max-sat problem.
     
     topweight = max_weight;
-
-
+    
     // Min-sat problems create some strange issues with average clause density.
     if ( avg_cls_length <= 3.1 ){
       problem_type = PARTIAL_3_SAT;
@@ -478,6 +484,7 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
   }
   
   if ( type == 2 ){ // This is a weighted max-sat problem.
+    
     topweight = weight_sum;
     
     if ( max_cls_length <= 4) {
@@ -493,8 +500,7 @@ int loadDIMACSFile(FILE *fp, SAT *sat_ptr){
     }
     
   }
-
-
+  
   return 0;
 }
 
