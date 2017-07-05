@@ -39,7 +39,7 @@ def generateCNF(Jmatrix, hvector, outfile=None):
 
 if __name__ == "__main__":
     if len(sys.argv) < 4 or len(sys.argv) > 5:
-        print("Usage: ./generateCNF.py N J h [<output.cnf>]")
+        print("Usage: ./generateCNF.py N J h [<output.wcnf>]")
         sys.exit(1)
 
     N = int(sys.argv[1])
