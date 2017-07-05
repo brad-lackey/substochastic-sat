@@ -24,6 +24,8 @@ def generateCNF(Jmatrix, hvector, outfile=None):
                         f.write("{0} -{1} {2} 0\n".format(2*Jmatrix[row,col], row+1, col+1))
 
                 f.write("{0} -{1} 0\n".format(2*hvector[row], row+1))
+
+        print("WCNF written to {0}".format(outfile))
     else:
         print("p wcnf {0} {1} {2}".format(vars, cls, topweight))
 
