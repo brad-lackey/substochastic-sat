@@ -7,8 +7,10 @@ def generateCNF(Jmatrix, hvector, outfile=None):
 
     rows, cols, clusters = np.shape(Jmatrix)
 
-    vars = rows
-    cls = np.count_nonzero(Jmatrix) + rows
+    N = rows
+
+    vars = 2*rows
+    cls = np.count_nonzero(Jmatrix[:,:,0:2]) + 2*N + N + 2
 
     topweight = max([2*np.max(Jmatrix), 2*np.max(hvector)])
 
