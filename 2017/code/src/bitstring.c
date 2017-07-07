@@ -119,7 +119,6 @@ int randomBitstring(Bitstring bst){
  */
 void copyBitstring(Bitstring bst_out, Bitstring bst_in){
   int i;
-  
   // Copy each element of the array.
   for (i=0; i<blen; ++i) bst_out->node[i] = bst_in->node[i];
   
