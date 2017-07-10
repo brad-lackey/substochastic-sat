@@ -50,6 +50,10 @@ def generateCNF(Jmatrix, hvector, outfile=None):
                             # couple qubits via intracluster interactions
                             addCoupling(lines, 2*Jmatrix[row,col,cluster], N*cluster + 2*N*ws_cluster + row+1, N*cluster + 2*N*ws_cluster + col+1)
 
+                            if cluster == 0 and ws_cluster == ws_cluster_pairs-1:
+                                # print("2 instracluster ({0} {1})".format(2*N*ws_cluster_pairs + row+1, 2*N*ws_cluster_pairs + col+1))
+                                addCoupling(lines, 2*Jmatrix[row, col, cluster], 2*N*ws_cluster_pairs + row+1, 2*N*ws_cluster_pairs + col+1)
+
                 if Jmatrix[row, row, cluster] and row+1 > N/2:
                     # print("2 intercluster (weak-strong) ({0} {1})".format(N*cluster + 2*N*ws_cluster + row+1, N*cluster + 2*N*ws_cluster + N + row+1))
                     # couple qubits from cluster 1 (weak) to cluster 2 (strong) via intercluster interactions
@@ -82,11 +86,11 @@ def generateCNF(Jmatrix, hvector, outfile=None):
 
                             # print("2 intercluster (strong-strong) ({0} {1})".format( 2*N*(ws_cluster_pairs) + N + row+1, 2*N*ws_cluster + N + row+1))
                             # couple strong clusters of the last cluster to this cluster
-                            addCoupling(lines, 2*J, 2*N*(ws_cluster_pairs) + N + row+1, 2*N*ws_cluster + N + row+1)
+                            addCoupling(lines, 2*J, 2*N*(ws_cluster_pairs) + row+1, 2*N*ws_cluster + N + row+1)
 
                             # print("2 intercluster (strong-strong) ({0} {1})".format(2*N*(ws_cluster_pairs) + N + row+1, N + row+1))
                             # couple strong clusters of the first cluster to this cluster
-                            addCoupling(lines, 2*J, 2*N*(ws_cluster_pairs) + N + row+1, N + row+1)
+                            addCoupling(lines, 2*J, 2*N*(ws_cluster_pairs) + row+1, N + row+1)
                 if cluster < 2:
                     # print("1 field-cluster ({0})".format(2*N*ws_cluster + N*cluster + row+1))
                     # couple qubits to the local field in the cluster
