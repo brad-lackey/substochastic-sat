@@ -2,6 +2,7 @@
 import sys
 import numpy as np
 
+
 def printToWCNF(file, lines, vars, topweight):
     if file:
         with open(file, 'w') as f:
@@ -15,8 +16,10 @@ def printToWCNF(file, lines, vars, topweight):
         for line in lines:
             print(line)
 
+
 def coupleToField(lines, weight, var):
     lines.append("{0} -{1} 0".format(weight, var))
+
 
 def addCoupling(lines, weight, var1, var2):
     lines.append("{0} {1} -{2} 0".format(weight, var1, var2))
@@ -33,16 +36,23 @@ def generateCNF(Jmatrix, hvector, outfile=None):
     # number of qubits per cluster
     N = rows
 
-    vars = ws_cluster_pairs*2*N
+    vars = ws_cluster_pairs*2*N + N
 
     topweight = max([2*np.max(Jmatrix), 2*np.max(hvector)])
 
+    # ferromagnetism = 0 or 1
+    fm = 0
     lines = []
     for ws_cluster in range(ws_cluster_pairs):
         # print("---")
 
-        for row in range(rows):
-            for cluster in range(clusters):
+        for cluster in range(clusters):
+
+            if cluster > 0 and ws_cluster > 0:
+                # flip coin to determine ferromagnetism
+                fm = np.random.randint(2)
+
+            for row in range(rows):
                 for col in range(cols):
                     if Jmatrix[row, col, cluster]:
                         if col > row:
@@ -55,16 +65,14 @@ def generateCNF(Jmatrix, hvector, outfile=None):
                                 addCoupling(lines, 2*Jmatrix[row, col, cluster], 2*N*ws_cluster_pairs + row+1, 2*N*ws_cluster_pairs + col+1)
 
                 if Jmatrix[row, row, cluster] and row+1 > N/2:
-                    # print("2 intercluster (weak-strong) ({0} {1})".format(N*cluster + 2*N*ws_cluster + row+1, N*cluster + 2*N*ws_cluster + N + row+1))
+                    # print("2 intercluster (weak-strong) ({0} {1})".format(2*N*ws_cluster + row+1, 2*N*ws_cluster + N + row+1))
                     # couple qubits from cluster 1 (weak) to cluster 2 (strong) via intercluster interactions
-                    addCoupling(lines, 2*Jmatrix[row,row,cluster], N*cluster + 2*N*ws_cluster + row+1, N*cluster + 2*N*ws_cluster + N + row+1)
+                    addCoupling(lines, 2*Jmatrix[row,row,cluster], 2*N*ws_cluster + row+1, 2*N*ws_cluster + N + row+1)
 
                     # if not the first weak-strong cluster pair, then couple to previous cluster pair
                     if ws_cluster > 0:
-                        # flip coin to determine ferromagnetism
-                        coin = np.random.randint(2)
 
-                        if coin == 0:
+                        if fm:
                             J = 1
                         else:
                             J = -1
@@ -84,17 +92,22 @@ def generateCNF(Jmatrix, hvector, outfile=None):
                             else:
                                 J = -1
 
-                            # print("2 intercluster (strong-strong) ({0} {1})".format( 2*N*(ws_cluster_pairs) + N + row+1, 2*N*ws_cluster + N + row+1))
+                            # print("2 intercluster (strong-strong) ({0} {1})".format(2*N*(ws_cluster_pairs) + row+1, 2*N*ws_cluster + N + row+1))
                             # couple strong clusters of the last cluster to this cluster
                             addCoupling(lines, 2*J, 2*N*(ws_cluster_pairs) + row+1, 2*N*ws_cluster + N + row+1)
 
-                            # print("2 intercluster (strong-strong) ({0} {1})".format(2*N*(ws_cluster_pairs) + N + row+1, N + row+1))
+                            # print("2 intercluster (strong-strong) ({0} {1})".format(2*N*(ws_cluster_pairs) + row+1, N + row+1))
                             # couple strong clusters of the first cluster to this cluster
                             addCoupling(lines, 2*J, 2*N*(ws_cluster_pairs) + row+1, N + row+1)
                 if cluster < 2:
                     # print("1 field-cluster ({0})".format(2*N*ws_cluster + N*cluster + row+1))
                     # couple qubits to the local field in the cluster
                     coupleToField(lines, 2*hvector[row, cluster], 2*N*ws_cluster + N*cluster + row+1)
+
+                    # if last cluster, couple single N-qubit cluster to the field
+                    if ws_cluster_pairs > 1 and ws_cluster == ws_cluster_pairs-1:
+                        # print("1 field-cluster ({0})".format(2*N*ws_cluster_pairs + row+1))
+                        coupleToField(lines, 2*hvector[row, cluster], 2*N*ws_cluster_pairs + row+1)
 
     printToWCNF(outfile, lines, vars, topweight)
 
