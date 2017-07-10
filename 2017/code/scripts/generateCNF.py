@@ -42,6 +42,7 @@ def generateCNF(Jmatrix, hvector, outfile=None):
 
     # ferromagnetism = 0 or 1
     fm = 0
+    fm2 = 0
     lines = []
     for ws_cluster in range(ws_cluster_pairs):
         # print("---")
@@ -51,6 +52,9 @@ def generateCNF(Jmatrix, hvector, outfile=None):
             if cluster > 0 and ws_cluster > 0:
                 # flip coin to determine ferromagnetism
                 fm = np.random.randint(2)
+
+                if ws_cluster == ws_cluster_pairs-1:
+                    fm2 = np.random.randint(2)
 
             for row in range(rows):
                 for col in range(cols):
@@ -84,10 +88,7 @@ def generateCNF(Jmatrix, hvector, outfile=None):
                         # if last cluster, couple single N-qubit cluster to the rest of the pack
                         if ws_cluster_pairs > 1 and ws_cluster == ws_cluster_pairs-1:
 
-                            # flip coin to determine ferromagnetism
-                            coin = np.random.randint(2)
-
-                            if coin == 0:
+                            if fm2:
                                 J = 1
                             else:
                                 J = -1
