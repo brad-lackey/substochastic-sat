@@ -29,7 +29,7 @@ def addCoupling(lines, weight, var1, var2):
 def generateCNF(Jmatrix, hvector, outfile=None):
 
     # number of weak-strong cluster pairs
-    ws_cluster_pairs = 19
+    ws_cluster_pairs = 2
 
     rows, cols, clusters = np.shape(Jmatrix)
 
@@ -65,7 +65,7 @@ def generateCNF(Jmatrix, hvector, outfile=None):
                             addCoupling(lines, 2*Jmatrix[row,col,cluster], N*cluster + 2*N*ws_cluster + row+1, N*cluster + 2*N*ws_cluster + col+1)
 
                             if cluster == 0 and ws_cluster == ws_cluster_pairs-1:
-                                # print("2 instracluster ({0} {1})".format(2*N*ws_cluster_pairs + row+1, 2*N*ws_cluster_pairs + col+1))
+                                # print("2 intracluster ({0} {1})".format(2*N*ws_cluster_pairs + row+1, 2*N*ws_cluster_pairs + col+1))
                                 addCoupling(lines, 2*Jmatrix[row, col, cluster], 2*N*ws_cluster_pairs + row+1, 2*N*ws_cluster_pairs + col+1)
 
                 if Jmatrix[row, row, cluster] and row+1 > N/2:
@@ -77,9 +77,9 @@ def generateCNF(Jmatrix, hvector, outfile=None):
                     if ws_cluster > 0:
 
                         if fm:
-                            J = 1
+                            J = 100
                         else:
-                            J = -1
+                            J = -100
 
                         # print("2 intercluster (strong-strong) ({0} {1})".format(2*N*(ws_cluster-1) + N + row+1, 2*N*ws_cluster + N + row+1))
                         # couple strong clusters together
@@ -89,9 +89,9 @@ def generateCNF(Jmatrix, hvector, outfile=None):
                         if ws_cluster_pairs > 1 and ws_cluster == ws_cluster_pairs-1:
 
                             if fm2:
-                                J = 1
+                                J = 100
                             else:
-                                J = -1
+                                J = -100
 
                             # print("2 intercluster (strong-strong) ({0} {1})".format(2*N*(ws_cluster_pairs) + row+1, 2*N*ws_cluster + N + row+1))
                             # couple strong clusters of the last cluster to this cluster
@@ -127,8 +127,12 @@ if __name__ == "__main__":
     if len(sys.argv) == 6:
         outfile = sys.argv[5]
 
-    Jmatrix = J*np.ones((N, N, 3), dtype=np.int)
-    Jmatrix[:,:,2] = 0
+    X = np.array([[0, 1],[1, 0]])
+    Jmatrix = J*np.ones((4, 4), dtype=np.int)
+    Jmatrix = np.kron(X, Jmatrix)
+    Jmatrix = np.dstack((Jmatrix, Jmatrix))
+    Jmatrix = np.dstack((Jmatrix, np.zeros((8,8), dtype=np.int)))
+
     hvector = np.ones((N, 2), dtype=np.int)
     hvector[:,0] = h1
     hvector[:,1] = h2
