@@ -18,25 +18,34 @@ def printToWCNF(file, lines, vars, topweight):
 
 
 def coupleToField(lines, weight, var):
-    lines.append("{0} -{1} 0".format(weight, var))
+    if weight > 0:
+        lines.append("{0} -{1} 0".format(weight, var))
+    else:
+        lines.append("{0} {1} 0".format(-weight, var))
 
 
 def addCoupling(lines, weight, var1, var2):
-    lines.append("{0} {1} -{2} 0".format(weight, var1, var2))
-    lines.append("{0} -{1} {2} 0".format(weight, var1, var2))
+    if weight > 0:
+        lines.append("{0} {1} -{2} 0".format(weight, var1, var2))
+        lines.append("{0} -{1} {2} 0".format(weight, var1, var2))
+    else:
+        lines.append("{0} {1} {2} 0".format(-weight, var1, var2))
+        lines.append("{0} -{1} -{2} 0".format(-weight, var1, var2))
 
 
 def generateCNF(Jmatrix, hvector, outfile=None):
 
     # number of weak-strong cluster pairs
-    ws_cluster_pairs = 2
+    ws_cluster_pairs = 1
 
     rows, cols, clusters = np.shape(Jmatrix)
 
     # number of qubits per cluster
     N = rows
 
-    vars = ws_cluster_pairs*2*N + N
+    vars = ws_cluster_pairs*2*N
+    if ws_cluster_pairs > 1:
+        vars += N
 
     topweight = max([2*np.max(Jmatrix), 2*np.max(hvector)])
 
@@ -64,7 +73,7 @@ def generateCNF(Jmatrix, hvector, outfile=None):
                             # couple qubits via intracluster interactions
                             addCoupling(lines, 2*Jmatrix[row,col,cluster], N*cluster + 2*N*ws_cluster + row+1, N*cluster + 2*N*ws_cluster + col+1)
 
-                            if cluster == 0 and ws_cluster == ws_cluster_pairs-1:
+                            if cluster == 0 and ws_cluster_pairs > 1 and ws_cluster == ws_cluster_pairs-1:
                                 # print("2 intracluster ({0} {1})".format(2*N*ws_cluster_pairs + row+1, 2*N*ws_cluster_pairs + col+1))
                                 addCoupling(lines, 2*Jmatrix[row, col, cluster], 2*N*ws_cluster_pairs + row+1, 2*N*ws_cluster_pairs + col+1)
 
@@ -128,10 +137,10 @@ if __name__ == "__main__":
         outfile = sys.argv[5]
 
     X = np.array([[0, 1],[1, 0]])
-    Jmatrix = J*np.ones((4, 4), dtype=np.int)
+    Jmatrix = J*np.ones((N/2, N/2), dtype=np.int)
     Jmatrix = np.kron(X, Jmatrix)
     Jmatrix = np.dstack((Jmatrix, Jmatrix))
-    Jmatrix = np.dstack((Jmatrix, np.zeros((8,8), dtype=np.int)))
+    Jmatrix = np.dstack((Jmatrix, np.zeros((N,N), dtype=np.int)))
 
     hvector = np.ones((N, 2), dtype=np.int)
     hvector[:,0] = h1
