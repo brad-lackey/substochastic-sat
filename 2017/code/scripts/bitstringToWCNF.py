@@ -40,6 +40,7 @@ if __name__ == "__main__":
         # add field couplings
         lines.append("{0} {1} 0".format(topweight, bitstring[i]))
 
+    print("c Answer: {0}, Cost: 0".format(" ".join(bitstring)))
     # print wcnf file to output
     print("p wcnf {0} {1} {2}".format(len(bits), len(lines), topweight))
     for line in lines:
