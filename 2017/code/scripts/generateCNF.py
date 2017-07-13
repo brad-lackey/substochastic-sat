@@ -4,14 +4,20 @@ import numpy as np
 
 
 def printToWCNF(file, lines, vars, topweight):
+    # list of soft clauses' weights
+    soft = [int(line.split()[0]) for line in lines if int(line.split()[0]) < topweight]
+    soft_sum = sum(soft)
+
     if file:
         with open(file, 'w') as f:
+            f.write("c Soft clauses weight: {0}\n".format(soft_sum))
             f.write("p wcnf {0} {1} {2}\n".format(vars, len(lines), topweight))
         with open(file, 'a') as f:
             for line in lines:
                 f.write("{0}\n".format(line))
         print("{0} lines written to {1}.".format(len(lines) + 1, file))
     else:
+        print("c Soft clauses weight: {0}".format(soft_sum))
         print("p wcnf {0} {1} {2}".format(vars, len(lines), topweight))
         for line in lines:
             print(line)
@@ -20,23 +26,27 @@ def printToWCNF(file, lines, vars, topweight):
 def coupleToField(lines, weight, var):
     if weight > 0:
         lines.append("{0} -{1} 0".format(weight, var))
+        # print("{0} is true, cost:{1}".format(var, weight))
     else:
         lines.append("{0} {1} 0".format(-weight, var))
+        # print("{0} is false, cost:{1}".format(var, -weight))
 
 
 def addCoupling(lines, weight, var1, var2):
     if weight > 0:
         lines.append("{0} {1} -{2} 0".format(weight, var1, var2))
         lines.append("{0} -{1} {2} 0".format(weight, var1, var2))
+        # print("{0} and {1} are same, cost: {2}".format(var1, var2, weight))
     else:
         lines.append("{0} {1} {2} 0".format(-weight, var1, var2))
         lines.append("{0} -{1} -{2} 0".format(-weight, var1, var2))
+        # print("{0} and {1} are opposite, cost: {2}".format(var1, var2, -weight))
 
 
 def generateCNF(Jmatrix, hvector, outfile=None):
 
     # number of weak-strong cluster pairs
-    ws_cluster_pairs = 1
+    ws_cluster_pairs = 2
 
     rows, cols, clusters = np.shape(Jmatrix)
 
@@ -136,7 +146,7 @@ if __name__ == "__main__":
     if len(sys.argv) == 6:
         outfile = sys.argv[5]
 
-    X = np.array([[0, 1],[1, 0]])
+    X = np.array([[0, 1],[1, 0]], dtype=np.int)
     Jmatrix = J*np.ones((N/2, N/2), dtype=np.int)
     Jmatrix = np.kron(X, Jmatrix)
     Jmatrix = np.dstack((Jmatrix, Jmatrix))
