@@ -125,7 +125,7 @@ def generateCNF(Jmatrix, hvector, outfile=None):
                     coupleToField(lines, 2*hvector[row, cluster], 2*N*ws_cluster + N*cluster + row+1)
 
                     # if last cluster, couple single N-qubit cluster to the field
-                    if ws_cluster_pairs > 1 and ws_cluster == ws_cluster_pairs-1:
+                    if cluster == 1 and ws_cluster_pairs > 1 and ws_cluster == ws_cluster_pairs-1:
                         # print("1 field-cluster ({0})".format(2*N*ws_cluster_pairs + row+1))
                         coupleToField(lines, 2*hvector[row, cluster], 2*N*ws_cluster_pairs + row+1)
 
