@@ -3,7 +3,11 @@ import sys
 import numpy as np
 
 
-def printToWCNF(file, lines, vars, topweight):
+def printToWCNF(file, lines, vars):
+    # all clauses weights in a list
+    all = [int(line.split()[0]) for line in lines]
+    topweight = sum(all)
+
     # list of soft clauses' weights
     soft = [int(line.split()[0]) for line in lines if int(line.split()[0]) < topweight]
     soft_sum = sum(soft)
@@ -57,8 +61,6 @@ def generateCNF(clusters, Jmatrix, hvector, outfile=None):
     vars = ws_cluster_pairs*2*N
     if extra_cluster and ws_cluster_pairs > 1:
         vars += N
-
-    topweight = max([2*np.max(Jmatrix), 2*np.max(hvector)])
 
     # ferromagnetism = 0 or 1
     fm = 0
@@ -136,7 +138,7 @@ def generateCNF(clusters, Jmatrix, hvector, outfile=None):
                         # print("1 field-cluster ({0})".format(2*N*ws_cluster_pairs + row+1))
                         coupleToField(lines, 2*hvector[row, cluster], 2*N*ws_cluster_pairs + row+1)
 
-    printToWCNF(outfile, lines, vars, topweight)
+    printToWCNF(outfile, lines, vars)
 
 
 if __name__ == "__main__":
