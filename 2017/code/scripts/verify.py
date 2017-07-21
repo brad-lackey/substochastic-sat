@@ -13,10 +13,10 @@ def parseSSMC(output):
         return varmap
 
 
-def parseCNF(cnf, varmap):
+def getCostFromWCNF(wcnf, varmap):
     sum = 0
 
-    with open(cnf, 'r') as f:
+    with open(wcnf, 'r') as f:
         line = f.readline()
         while(len(line) > 0):
             if line.startswith("p") or line.startswith("c"):
@@ -46,6 +46,6 @@ if __name__ == "__main__":
     wcnf = sys.argv[1]
     varmap = sys.argv[2:]
 
-    sum = parseCNF(wcnf, varmap)
+    sum = getCostFromWCNF(wcnf, varmap)
 
     print sum

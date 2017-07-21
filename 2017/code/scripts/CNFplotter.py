@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
     programs = []
 
-    programs.append("CCEHC")
+    programs.append("../../../../CCEHC")
 
     N = [39, 64, 125]
 
