@@ -43,18 +43,19 @@ def addCoupling(lines, weight, var1, var2):
         # print("{0} and {1} are opposite, cost: {2}".format(var1, var2, -weight))
 
 
-def generateCNF(Jmatrix, hvector, outfile=None):
+def generateCNF(clusters, Jmatrix, hvector, outfile=None):
 
-    # number of weak-strong cluster pairs
-    ws_cluster_pairs = 2
+    ws_cluster_pairs = clusters / 2
 
-    rows, cols, clusters = np.shape(Jmatrix)
+    extra_cluster = (clusters % 2 == 1)
+
+    rows, cols, clusters_per_ws_pair = np.shape(Jmatrix)
 
     # number of qubits per cluster
     N = rows
 
     vars = ws_cluster_pairs*2*N
-    if ws_cluster_pairs > 1:
+    if extra_cluster and ws_cluster_pairs > 1:
         vars += N
 
     topweight = max([2*np.max(Jmatrix), 2*np.max(hvector)])
@@ -66,13 +67,13 @@ def generateCNF(Jmatrix, hvector, outfile=None):
     for ws_cluster in range(ws_cluster_pairs):
         # print("---")
 
-        for cluster in range(clusters):
+        for cluster in range(clusters_per_ws_pair):
 
             if cluster > 0 and ws_cluster > 0:
                 # flip coin to determine ferromagnetism
                 fm = np.random.randint(2)
 
-                if ws_cluster == ws_cluster_pairs-1:
+                if extra_cluster and ws_cluster == ws_cluster_pairs-1:
                     fm2 = np.random.randint(2)
 
             for row in range(rows):
@@ -83,7 +84,7 @@ def generateCNF(Jmatrix, hvector, outfile=None):
                             # couple qubits via intracluster interactions
                             addCoupling(lines, 2*Jmatrix[row,col,cluster], N*cluster + 2*N*ws_cluster + row+1, N*cluster + 2*N*ws_cluster + col+1)
 
-                            if cluster == 0 and ws_cluster_pairs > 1 and ws_cluster == ws_cluster_pairs-1:
+                            if extra_cluster and cluster == 0 and ws_cluster_pairs > 1 and ws_cluster == ws_cluster_pairs-1:
                                 # print("2 intracluster ({0} {1})".format(2*N*ws_cluster_pairs + row+1, 2*N*ws_cluster_pairs + col+1))
                                 addCoupling(lines, 2*Jmatrix[row, col, cluster], 2*N*ws_cluster_pairs + row+1, 2*N*ws_cluster_pairs + col+1)
 
@@ -112,20 +113,26 @@ def generateCNF(Jmatrix, hvector, outfile=None):
                             else:
                                 J = -100
 
-                            # print("2 intercluster (strong-strong) ({0} {1})".format(2*N*(ws_cluster_pairs) + row+1, 2*N*ws_cluster + N + row+1))
-                            # couple strong clusters of the last cluster to this cluster
-                            addCoupling(lines, 2*J, 2*N*(ws_cluster_pairs) + row+1, 2*N*ws_cluster + N + row+1)
+                            if extra_cluster:
 
-                            # print("2 intercluster (strong-strong) ({0} {1})".format(2*N*(ws_cluster_pairs) + row+1, N + row+1))
-                            # couple strong clusters of the first cluster to this cluster
-                            addCoupling(lines, 2*J, 2*N*(ws_cluster_pairs) + row+1, N + row+1)
+                                # print("2 intercluster (strong-strong) ({0} {1})".format(2*N*(ws_cluster_pairs) + row+1, 2*N*ws_cluster + N + row+1))
+                                # couple strong clusters of the last cluster to this cluster
+                                addCoupling(lines, 2*J, 2*N*(ws_cluster_pairs) + row+1, 2*N*ws_cluster + N + row+1)
+
+                                # print("2 intercluster (strong-strong) ({0} {1})".format(2*N*(ws_cluster_pairs) + row+1, N + row+1))
+                                # couple strong clusters of the first cluster to this cluster
+                                addCoupling(lines, 2*J, 2*N*(ws_cluster_pairs) + row+1, N + row+1)
+                            elif clusters > 4:
+                                # print("2 intercluster (strong-strong) ({0} {1})".format(2*N*ws_cluster + N + row+1, N + row+1))
+                                # couple strong clusters of the last cluster to the first cluster
+                                addCoupling(lines, 2*J, 2*N*ws_cluster + N + row+1, N + row+1)
                 if cluster < 2:
                     # print("1 field-cluster ({0})".format(2*N*ws_cluster + N*cluster + row+1))
                     # couple qubits to the local field in the cluster
                     coupleToField(lines, 2*hvector[row, cluster], 2*N*ws_cluster + N*cluster + row+1)
 
                     # if last cluster, couple single N-qubit cluster to the field
-                    if cluster == 1 and ws_cluster_pairs > 1 and ws_cluster == ws_cluster_pairs-1:
+                    if extra_cluster and cluster == 1 and ws_cluster_pairs > 1 and ws_cluster == ws_cluster_pairs-1:
                         # print("1 field-cluster ({0})".format(2*N*ws_cluster_pairs + row+1))
                         coupleToField(lines, 2*hvector[row, cluster], 2*N*ws_cluster_pairs + row+1)
 
@@ -133,18 +140,19 @@ def generateCNF(Jmatrix, hvector, outfile=None):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 5 or len(sys.argv) > 6:
-        print("Usage: ./generateCNF.py N J h1 h2 [<output.wcnf>]")
+    if len(sys.argv) < 6 or len(sys.argv) > 7:
+        print("Usage: ./generateCNF.py num_clusters qubits_per_cluster J h1(weak coupling) h2(strong coupling) [<output.wcnf>]")
         sys.exit(1)
 
-    N = int(sys.argv[1])
-    J = int(sys.argv[2])
-    h1 = int(sys.argv[3])
-    h2 = int(sys.argv[4])
+    clusters = int(sys.argv[1])
+    N = int(sys.argv[2])
+    J = int(sys.argv[3])
+    h1 = int(sys.argv[4])
+    h2 = int(sys.argv[5])
 
     outfile = None
-    if len(sys.argv) == 6:
-        outfile = sys.argv[5]
+    if len(sys.argv) == 7:
+        outfile = sys.argv[6]
 
     X = np.array([[0, 1],[1, 0]], dtype=np.int)
     Jmatrix = J*np.ones((N/2, N/2), dtype=np.int)
@@ -160,7 +168,6 @@ if __name__ == "__main__":
         Jmatrix[i, i, 0:2] = 0
         Jmatrix[i, i, 2] = J
 
-
-    generateCNF(Jmatrix, hvector, outfile)
+    generateCNF(clusters, Jmatrix, hvector, outfile)
 
     sys.exit(0)
