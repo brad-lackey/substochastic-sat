@@ -16,7 +16,7 @@ def parseOutput(outStr, program):
 
             elif line.endswith("sys"):
                 time = float(line.split()[0])
-    elif program == "CCEHC":
+    elif program == "../../../../CCEHC":
         for line in lines:
             if line.startswith("c time"):
                 time = float(line.split()[4])
@@ -47,8 +47,8 @@ def timeProgram(program, vars):
     args.append(program)
     args.append("out.wcnf")
 
-    if program == "CCEHC":
-        args.append(TIME.time())
+    if program == "../../../../CCEHC":
+        args.append(str(TIME.time()))
         args.append("10")           # 10 seconds of runtime
 
     try:
@@ -62,9 +62,11 @@ def timeProgram(program, vars):
 def printResultsToCSV(csv_file, times, N):
 
     with open(csv_file, 'w') as f:
-        f.write("Size (Qubits)," + ",".join(N) + "\n")
+        f.write("Size (Qubits)," + ",".join(map(str,N)) + "\n")
         for pgm in times.keys():
-            f.write(pgm + "," + ",".join(times[pgm] + "\n"))
+	    tmp = pgm.lstrip("./") + ","
+            tmp = tmp + ",".join(map(str, times[pgm]))
+            f.write(tmp + "\n")
 
 
 if __name__ == "__main__":
@@ -79,7 +81,7 @@ if __name__ == "__main__":
 
     programs.append("../../../../CCEHC")
 
-    N = [39, 64, 125]
+    N = [20, 25, 30, 35, 39, 45, 50, 55, 60, 64, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125]
 
     times = {}
 
