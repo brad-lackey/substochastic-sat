@@ -4,6 +4,7 @@ import numpy as np
 from subprocess import check_output, check_call
 import matplotlib.pyplot as plt
 import time as TIME
+from .utilities import sendEmail
 
 
 def parseOutput(outStr, program):
@@ -74,7 +75,7 @@ def printResultsToCSV(csv_file, times, N):
 if __name__ == "__main__":
 
     if len(sys.argv) != 2:
-        print("Usage: ./CNFplotter.py <results.csv>")
+        print("Usage: " + sys.argv[0] + " <results.csv>")
         sys.exit(1)
 
     csv_file = sys.argv[1]
@@ -91,3 +92,5 @@ if __name__ == "__main__":
         times[program] = [timeProgram(program, n) for n in N]
 
     printResultsToCSV(csv_file, times, N)
+
+    sendEmail("Results are collected! Done!")
