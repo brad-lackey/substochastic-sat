@@ -5,18 +5,19 @@ from subprocess import check_output, check_call
 import matplotlib.pyplot as plt
 import time as TIME
 
+
 def parseOutput(outStr, program):
     lines = outStr.split('\n')
 
     time = -1
-    if program == "ssmc":
+    if program.lstrip("./") == "ssmc":
         for line in lines:
             if line.startswith("c Walltime:"):
                 time = float(line.split()[2])
 
             elif line.endswith("sys"):
                 time = float(line.split()[0])
-    elif program == "../../../../CCEHC":
+    elif program.lstrip("./") == "CCEHC":
         for line in lines:
             if line.startswith("c time"):
                 time = float(line.split()[4])
@@ -59,12 +60,13 @@ def timeProgram(program, vars):
         print("Could not run \"{0}\"!".format(program))
         return None
 
+
 def printResultsToCSV(csv_file, times, N):
 
     with open(csv_file, 'w') as f:
-        f.write("Size (Qubits)," + ",".join(map(str,N)) + "\n")
+        f.write("Size (Qubits)," + ",".join(map(str, N)) + "\n")
         for pgm in times.keys():
-	    tmp = pgm.lstrip("./") + ","
+            tmp = pgm.lstrip("./") + ","
             tmp = tmp + ",".join(map(str, times[pgm]))
             f.write(tmp + "\n")
 
