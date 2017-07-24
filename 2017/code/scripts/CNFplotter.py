@@ -4,7 +4,7 @@ import numpy as np
 from subprocess import check_output, check_call
 import matplotlib.pyplot as plt
 import time as TIME
-from .utilities import sendEmail
+from utilities import sendEmail
 
 
 def parseOutput(outStr, program):
@@ -51,7 +51,7 @@ def timeProgram(program, vars):
 
     if program == "../../../../CCEHC":
         args.append(str(TIME.time()))
-        args.append("10")           # 10 seconds of runtime
+        args.append("600")           # 10 mins of runtime
 
     try:
         outStr = check_output(args)
