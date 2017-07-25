@@ -51,7 +51,7 @@ def timeProgram(program, vars):
 
     if program == "../../../../CCEHC":
         args.append(str(TIME.time()))
-        args.append("600")           # 10 mins of runtime
+        args.append("3600")           # 1 hour of runtime
 
     try:
         outStr = check_output(args)
@@ -84,13 +84,24 @@ if __name__ == "__main__":
 
     programs.append("../../../../CCEHC")
 
-    N = [20, 25, 30, 35, 39, 45, 50, 55, 60, 64, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125]
+    N = [45, 64, 125]
+
+    avgs = 10.0
 
     times = {}
 
     for program in programs:
-        times[program] = [timeProgram(program, n) for n in N]
+        for avg in range(avgs):
+            if program in times:
+                for i, time in enumerate([timeProgram(program, n) for n in N]):
+                    times[program][i] += time
+            else:
+                times[program] = [timeProgram(program, n) for n in N]
+
+        # compute average of times
+        times[program] = [time/avgs for time in times[program]]
+
+        sendEmail("Finished analyzing {0}.".format(program.lstrip("./")))
 
     printResultsToCSV(csv_file, times, N)
 
-    sendEmail("Results are collected! Done!")
