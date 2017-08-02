@@ -109,8 +109,10 @@ if __name__ == "__main__":
             else:
                 for i, n in enumerate(N):
                     t, opt = timeProgram(program, n)
-                    times[program] = []
-                    optima[program] = []
+                    if program not in times:
+                        times[program] = []
+                    if program not in optima:
+                        optima[program] = []
 
                     times[program].append(t)
                     optima[program].append([opt])
