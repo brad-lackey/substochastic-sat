@@ -11,6 +11,7 @@ def parseOutput(outStr, program):
     lines = outStr.split('\n')
 
     time = -1
+    optimum = 1e10
     if program.lstrip("./") == "ssmc":
         for line in lines:
             if line.startswith("c Walltime:"):
@@ -22,8 +23,10 @@ def parseOutput(outStr, program):
         for line in lines:
             if line.startswith("c time"):
                 time = float(line.split()[4])
+            elif line.startswith("o"):
+                optimum = int(line.split()[1])
 
-    return time
+    return time, optimum
 
 
 def timeProgram(program, vars):
@@ -62,14 +65,18 @@ def timeProgram(program, vars):
         return None
 
 
-def printResultsToCSV(csv_file, times, N):
+def printResultsToCSV(csv_file, times, optima, N):
 
     with open(csv_file, 'w') as f:
         f.write("Size (Qubits)," + ",".join(map(str, N)) + "\n")
         for pgm in times.keys():
-            tmp = pgm.lstrip("./") + ","
+            tmp = pgm.lstrip("./") + " times,"
             tmp = tmp + ",".join(map(str, times[pgm]))
             f.write(tmp + "\n")
+            tmp = pgm.lstrip("./") + " optimum,"
+            tmp = tmp + ",".join(map(str, optima[pgm]))
+            f.write(tmp + "\n")
+
 
 
 if __name__ == "__main__":
@@ -86,22 +93,35 @@ if __name__ == "__main__":
 
     N = [45, 64, 125]
 
-    avgs = 10.0
+    trials = 10
 
     times = {}
+    optima = {}
+    min_optima = {}
 
     for program in programs:
-        for avg in range(avgs):
+        for trial in range(trials):
             if program in times:
-                for i, time in enumerate([timeProgram(program, n) for n in N]):
-                    times[program][i] += time
+                for i, n in enumerate(N):
+                    t, opt = timeProgram(program, n)
+                    times[program][i] += t
+                    optima[program][i].append(opt)
             else:
-                times[program] = [timeProgram(program, n) for n in N]
+                for i, n in enumerate(N):
+                    t, opt = timeProgram(program, n)
+                    times[program] = []
+                    optima[program] = []
+
+                    times[program].append(t)
+                    optima[program].append([opt])
 
         # compute average of times
-        times[program] = [time/avgs for time in times[program]]
+        times[program] = [time / float(trials) for time in times[program]]
+
+        # find the minimum optimum
+        min_optima[program] = [min(opts) for opts in optima[program]]
 
         sendEmail("Finished analyzing {0}.".format(program.lstrip("./")))
 
-    printResultsToCSV(csv_file, times, N)
+    printResultsToCSV(csv_file, times, min_optima, N)
 
