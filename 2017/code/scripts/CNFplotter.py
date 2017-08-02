@@ -4,6 +4,7 @@ import numpy as np
 from subprocess import check_output, check_call
 import matplotlib.pyplot as plt
 import time as TIME
+from joblib import Parallel, delayed
 from utilities import sendEmail
 
 
@@ -91,7 +92,9 @@ if __name__ == "__main__":
 
     programs.append("../../../../CCEHC")
 
-    N = [45, 64, 125]
+    N = [20, 25, 30, 35, 39, 45, 50, 55, 60, 64, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125]
+
+    N_JOBS = 2
 
     trials = 10
 
@@ -100,15 +103,17 @@ if __name__ == "__main__":
     min_optima = {}
 
     for program in programs:
+        full_results = Parallel(n_jobs=N_JOBS)(delayed(timeProgram)(program, n) for trial in range(trials) for n in N)
         for trial in range(trials):
+            results = full_results[trial*len(N):(trial+1)*len(N)]
             if program in times:
-                for i, n in enumerate(N):
-                    t, opt = timeProgram(program, n)
+                for i, res in enumerate(results):
+                    t, opt = res
                     times[program][i] += t
                     optima[program][i].append(opt)
             else:
-                for i, n in enumerate(N):
-                    t, opt = timeProgram(program, n)
+                for i, res in enumerate(results):
+                    t, opt = res
                     if program not in times:
                         times[program] = []
                     if program not in optima:
@@ -119,6 +124,9 @@ if __name__ == "__main__":
 
         # compute average of times
         times[program] = [time / float(trials) for time in times[program]]
+
+        # print the optima found
+        print("Optima for {0}: {1}".format(program, optima[program]))
 
         # find the minimum optimum
         min_optima[program] = [min(opts) for opts in optima[program]]
