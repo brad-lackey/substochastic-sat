@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import sys
 import numpy as np
-from subprocess import check_output, check_call
+from subprocess32 import check_output, check_call, TimeoutExpired
 import matplotlib.pyplot as plt
 import time as TIME
 from joblib import Parallel, delayed
@@ -53,17 +53,21 @@ def timeProgram(program, vars):
     args.append(program)
     args.append("out.wcnf")
 
+    TIMEOUT = 3600
+
     if program == "../../../../CCEHC":
         args.append(str(TIME.time()))
-        args.append("3600")           # 1 hour of runtime
+        args.append(str(TIMEOUT))           # 1 hour of runtime
 
     try:
-        outStr = check_output(args)
+        outStr = check_output(args, timeout=1.1*TIMEOUT)
         return parseOutput(outStr, program)
-
+    except TimeoutExpired:
+        print("\"{0}\" timed out.".format(program))
+        return None, None
     except Exception:
         print("Could not run \"{0}\"!".format(program))
-        return None
+        return None, None
 
 
 def printResultsToCSV(csv_file, times, optima, N):
@@ -106,30 +110,29 @@ if __name__ == "__main__":
         full_results = Parallel(n_jobs=N_JOBS)(delayed(timeProgram)(program, n) for trial in range(trials) for n in N)
         for trial in range(trials):
             results = full_results[trial*len(N):(trial+1)*len(N)]
-            if program in times:
-                for i, res in enumerate(results):
-                    t, opt = res
-                    times[program][i] += t
+            for i, res in enumerate(results):
+                t, opt = res
+                if trial > 0:
+                    times[program][i].append(t)
                     optima[program][i].append(opt)
-            else:
-                for i, res in enumerate(results):
-                    t, opt = res
+                else:
                     if program not in times:
                         times[program] = []
                     if program not in optima:
                         optima[program] = []
 
-                    times[program].append(t)
+                    times[program].append([t])
                     optima[program].append([opt])
 
+
         # compute average of times
-        times[program] = [time / float(trials) for time in times[program]]
+        times[program] = [sum(filter(None, time))/len(list(filter(None, time))) for time in times[program]]
 
         # print the optima found
         print("Optima for {0}: {1}".format(program, optima[program]))
 
         # find the minimum optimum
-        min_optima[program] = [min(opts) for opts in optima[program]]
+        min_optima[program] = [min(filter(None, opts)) for opts in optima[program]]
 
         sendEmail("Finished analyzing {0}.".format(program.lstrip("./")))
 
