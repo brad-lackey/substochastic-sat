@@ -37,7 +37,7 @@ def timeProgram(program, vars):
 
     args = []
 
-    outfile = "out.{0}.{1}.wcnf".format(program, vars)
+    outfile = "out.{0}.{1}.wcnf".format(program.lstrip("./"), vars)
 
     args.append("./generateCNF.py")
     args.append(str(vars))
@@ -71,7 +71,7 @@ def timeProgram(program, vars):
             os.remove(outfile)
         except Exception:
             pass  # No outfile found
-        
+
         return t, opt
     except TimeoutExpired:
         print("\"{0}\" timed out.".format(program))
