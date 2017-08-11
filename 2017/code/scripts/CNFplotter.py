@@ -61,7 +61,9 @@ def timeProgram(program, vars):
 
     try:
         outStr = check_output(args, timeout=1.1*TIMEOUT)
-        return parseOutput(outStr, program)
+        t, opt = parseOutput(outStr, program)
+        print("\"{0}\" gave an optimum of {1} at {2} s.".format(program, opt, t))
+        return t, opt
     except TimeoutExpired:
         print("\"{0}\" timed out.".format(program))
         return None, None
@@ -134,6 +136,8 @@ if __name__ == "__main__":
         # compute average of times
         avg_times[program] = [sum(filter(None, time))/len(list(filter(None, time))) if len(list(filter(None, time))) else None for time in times[program]]
 
+        # print the times found
+        print("Times for {0}: {1}".format(program, times[program]))
         # print the optima found
         print("Optima for {0}: {1}".format(program, optima[program]))
 
