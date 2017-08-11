@@ -81,6 +81,9 @@ def printResultsToCSV(csv_file, times, optima, avg_times, min_optima, N):
             tmp = pgm.lstrip("./") + " optima,"
             tmp = tmp + ",".join(map(lambda x: ";".join(map(str, x)), optima[pgm]))
             f.write(tmp + "\n")
+            tmp = pgm.lstrip("./") + " avg times,"
+            tmp = tmp + ",".join(map(str, avg_times[pgm]))
+            f.write(tmp + "\n")
             tmp = pgm.lstrip("./") + " min optimum,"
             tmp = tmp + ",".join(map(str, min_optima[pgm]))
             f.write(tmp + "\n")
@@ -129,13 +132,13 @@ if __name__ == "__main__":
                     optima[program].append([opt])
 
         # compute average of times
-        avg_times[program] = [sum(filter(None, time))/len(list(filter(None, time))) for time in times[program]]
+        avg_times[program] = [sum(filter(None, time))/len(list(filter(None, time))) if len(list(filter(None, time))) else None for time in times[program]]
 
         # print the optima found
         print("Optima for {0}: {1}".format(program, optima[program]))
 
         # find the minimum optimum
-        min_optima[program] = [min(filter(None, opts)) for opts in optima[program]]
+        min_optima[program] = [min(filter(None, opts)) if len(list(filter(None, opts))) else None for opts in optima[program]]
 
         sendEmail("Finished analyzing {0}.".format(program.lstrip("./")))
 
