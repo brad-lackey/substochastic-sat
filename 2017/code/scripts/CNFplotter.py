@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import time as TIME
 from joblib import Parallel, delayed
 from utilities import sendEmail
+import os
 
 
 def parseOutput(outStr, program):
@@ -36,13 +37,15 @@ def timeProgram(program, vars):
 
     args = []
 
+    outfile = "out.{0}.{1}.wcnf".format(program, vars)
+
     args.append("./generateCNF.py")
     args.append(str(vars))
     args.append(str(8))     # qubits per cluster
     args.append(str(100))   # J = 100
     args.append(str(44))    # h1 = 44
     args.append(str(-100))  # h2 = -100
-    args.append("out.wcnf")
+    args.append(outfile)
 
     check_call(args)
 
@@ -51,7 +54,7 @@ def timeProgram(program, vars):
     args = []
 
     args.append(program)
-    args.append("out.wcnf")
+    args.append(outfile)
 
     TIMEOUT = 3600
 
@@ -63,6 +66,12 @@ def timeProgram(program, vars):
         outStr = check_output(args, timeout=1.1*TIMEOUT)
         t, opt = parseOutput(outStr, program)
         print("\"{0}\" gave an optimum of {1} at {2} s.".format(program, opt, t))
+
+        try:
+            os.remove(outfile)
+        except Exception:
+            pass  # No outfile found
+        
         return t, opt
     except TimeoutExpired:
         print("\"{0}\" timed out.".format(program))
