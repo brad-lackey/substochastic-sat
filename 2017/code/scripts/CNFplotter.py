@@ -70,16 +70,19 @@ def timeProgram(program, vars):
         return None, None
 
 
-def printResultsToCSV(csv_file, times, optima, N):
+def printResultsToCSV(csv_file, times, optima, avg_times, min_optima, N):
 
     with open(csv_file, 'w') as f:
         f.write("Size (Qubits)," + ",".join(map(str, N)) + "\n")
         for pgm in times.keys():
             tmp = pgm.lstrip("./") + " times,"
-            tmp = tmp + ",".join(map(str, times[pgm]))
+            tmp = tmp + ",".join(map(lambda x: ";".join(map(str, x)), times[pgm]))
             f.write(tmp + "\n")
-            tmp = pgm.lstrip("./") + " optimum,"
-            tmp = tmp + ",".join(map(str, optima[pgm]))
+            tmp = pgm.lstrip("./") + " optima,"
+            tmp = tmp + ",".join(map(lambda x: ";".join(map(str, x)), optima[pgm]))
+            f.write(tmp + "\n")
+            tmp = pgm.lstrip("./") + " min optimum,"
+            tmp = tmp + ",".join(map(str, min_optima[pgm]))
             f.write(tmp + "\n")
 
 
@@ -104,6 +107,7 @@ if __name__ == "__main__":
 
     times = {}
     optima = {}
+    avg_times = {}
     min_optima = {}
 
     for program in programs:
@@ -124,9 +128,8 @@ if __name__ == "__main__":
                     times[program].append([t])
                     optima[program].append([opt])
 
-
         # compute average of times
-        times[program] = [sum(filter(None, time))/len(list(filter(None, time))) for time in times[program]]
+        avg_times[program] = [sum(filter(None, time))/len(list(filter(None, time))) for time in times[program]]
 
         # print the optima found
         print("Optima for {0}: {1}".format(program, optima[program]))
@@ -136,5 +139,5 @@ if __name__ == "__main__":
 
         sendEmail("Finished analyzing {0}.".format(program.lstrip("./")))
 
-    printResultsToCSV(csv_file, times, min_optima, N)
+    printResultsToCSV(csv_file, times, optima, avg_times, min_optima, N)
 
